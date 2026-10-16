@@ -10,6 +10,7 @@ export async function getComments(mangaId) {
       content,
       spoiler,
       created_at,
+      updated_at,
       profiles (
         username
       )
@@ -33,6 +34,21 @@ export async function addComment(mangaId, userId, content, spoiler = false) {
       spoiler,
       chapter_id: null
     })
+
+  if (error) throw error
+}
+
+// Kommentar bearbeiten / Update comment
+export async function updateComment(commentId, userId, content, spoiler) {
+  const { error } = await supabase
+    .from("comments")
+    .update({
+      content,
+      spoiler,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", commentId)
+    .eq("user_id", userId)
 
   if (error) throw error
 }

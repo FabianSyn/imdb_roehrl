@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom"
 import { getManga } from "../services/anilist"
 import { supabase } from "../services/supabase"
 import { getUserRating, getAverageRating, saveRating } from "../services/ratings"
-import { getComments, addComment, deleteComment } from "../services/comments"
+import { getComments, addComment, updateComment, deleteComment } from "../services/comments"
 
 // Manga-Details laden / Load manga details
 export default function MangaDetails() {
@@ -17,6 +17,9 @@ export default function MangaDetails() {
   const [comment, setComment] = useState("")
   const [spoiler, setSpoiler] = useState(false)
   const [commentMessage, setCommentMessage] = useState("")
+  const [editingId, setEditingId] = useState(null)
+  const [editContent, setEditContent] = useState("")
+  const [editSpoiler, setEditSpoiler] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -97,6 +100,45 @@ export default function MangaDetails() {
     }
   }
 
+  // Bearbeitung starten / Start editing
+  const handleStartEdit = (item) => {
+    setEditingId(item.id)
+    setEditContent(item.content)
+    setEditSpoiler(item.spoiler)
+    setCommentMessage("")
+  }
+
+  // Bearbeitung abbrechen / Cancel editing
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setEditContent("")
+    setEditSpoiler(false)
+  }
+
+  // Kommentar aktualisieren / Update comment
+  const handleUpdateComment = async (event, commentId) => {
+    event.preventDefault()
+    if (!user || !editContent.trim()) return
+
+    try {
+      await updateComment(
+        commentId,
+        user.id,
+        editContent.trim(),
+        editSpoiler
+      )
+
+      const commentData = await getComments(Number(id))
+      setComments(commentData)
+      setEditingId(null)
+      setEditContent("")
+      setEditSpoiler(false)
+      setCommentMessage("Kommentar aktualisiert.")
+    } catch {
+      setCommentMessage("Kommentar konnte nicht aktualisiert werden.")
+    }
+  }
+
   // Kommentar löschen / Delete comment
   const handleDeleteComment = async (commentId) => {
     if (!user) return
@@ -104,6 +146,12 @@ export default function MangaDetails() {
     try {
       await deleteComment(commentId, user.id)
       setComments(comments.filter((item) => item.id !== commentId))
+
+      if (editingId === commentId) {
+        handleCancelEdit()
+      }
+
+      setCommentMessage("Kommentar gelöscht.")
     } catch {
       setCommentMessage("Kommentar konnte nicht gelöscht werden.")
     }
@@ -384,24 +432,103 @@ export default function MangaDetails() {
                   </small>
                 </div>
 
-                {item.spoiler && (
-                  <span className="spoiler-badge">
-                    Spoiler
-                  </span>
-                )}
-
-                <p>
-                  {item.content}
-                </p>
-
-                {user?.id === item.user_id && (
-                  <button
-                    className="nav-button"
-                    type="button"
-                    onClick={() => handleDeleteComment(item.id)}
+                {editingId === item.id ? (
+                  <form
+                    onSubmit={(event) =>
+                      handleUpdateComment(event, item.id)
+                    }
                   >
-                    Löschen
-                  </button>
+                    <textarea
+                      value={editContent}
+                      onChange={(event) =>
+                        setEditContent(event.target.value)
+                      }
+                      maxLength="2000"
+                      required
+                    />
+
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={editSpoiler}
+                        onChange={(event) =>
+                          setEditSpoiler(event.target.checked)
+                        }
+                      />
+                      {" "}
+                      Enthält Spoiler
+                    </label>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "12px",
+                        marginTop: "14px",
+                        flexWrap: "wrap"
+                      }}
+                    >
+                      <button
+                        className="primary-button"
+                        type="submit"
+                      >
+                        Speichern
+                      </button>
+
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={handleCancelEdit}
+                      >
+                        Abbrechen
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    {item.spoiler && (
+                      <span className="spoiler-badge">
+                        Spoiler
+                      </span>
+                    )}
+
+                    <p>
+                      {item.content}
+                    </p>
+
+                    {item.updated_at &&
+                      item.updated_at !== item.created_at && (
+                        <small className="muted">
+                          Bearbeitet
+                        </small>
+                      )}
+
+                    {user?.id === item.user_id && (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "12px",
+                          marginTop: "14px",
+                          flexWrap: "wrap"
+                        }}
+                      >
+                        <button
+                          className="secondary-button"
+                          type="button"
+                          onClick={() => handleStartEdit(item)}
+                        >
+                          Bearbeiten
+                        </button>
+
+                        <button
+                          className="nav-button"
+                          type="button"
+                          onClick={() => handleDeleteComment(item.id)}
+                        >
+                          Löschen
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </article>
             ))

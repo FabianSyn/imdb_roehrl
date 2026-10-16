@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import { supabase } from "../services/supabase"
 
 // Login / Login
@@ -30,32 +30,84 @@ export default function Login() {
   }
 
   return (
-    <section>
-      <h1>Login</h1>
+    <main className="page">
+      <section className="auth-layout">
+        <div className="auth-intro auth-login">
+          <div className="auth-copy">
 
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          placeholder="E-Mail"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-        />
+            <h1 className="auth-title">
+              Welcome
+              <br />
+              Back<span>!</span>
+            </h1>
 
-        <input
-          type="password"
-          placeholder="Passwort"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-        />
+            <p className="auth-text">
+              Logge dich ein, um Manga zu bewerten, Kommentare zu schreiben und dein persönliches Profil zu verwalten.
+            </p>
+          </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Wird eingeloggt..." : "Login"}
-        </button>
-      </form>
+          <div className="auth-sfx">
+            LOGIN!
+          </div>
+        </div>
 
-      {message && <p>{message}</p>}
-    </section>
+        <div className="form-card auth-card">
+          <p className="hero-eyebrow">Account</p>
+
+          <h2 className="panel-title">
+            Einloggen
+          </h2>
+
+          <form onSubmit={handleSubmit}>
+            <label htmlFor="email">
+              E-Mail
+            </label>
+
+            <input
+              id="email"
+              type="email"
+              placeholder="deine@email.de"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+
+            <label htmlFor="password">
+              Passwort
+            </label>
+
+            <input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+
+            <button
+              className="primary-button auth-submit"
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? "Wird eingeloggt..." : "Login"}
+            </button>
+          </form>
+
+          {message && (
+            <div className="auth-message">
+              {message}
+            </div>
+          )}
+
+          <p className="auth-switch">
+            Noch keinen Account?{" "}
+            <Link to="/register">
+              Registrieren →
+            </Link>
+          </p>
+        </div>
+      </section>
+    </main>
   )
 }

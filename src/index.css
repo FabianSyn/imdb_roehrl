@@ -1,4 +1,4 @@
-/* Manga-Grundstil / Manga base style */
+/* Grundstil / Base style */
 :root {
   font-family: Arial, Helvetica, sans-serif;
   color: #111;
@@ -25,6 +25,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  color: var(--ink);
   background:
     linear-gradient(rgba(255,255,255,.18), rgba(255,255,255,.18)),
     repeating-linear-gradient(
@@ -34,7 +35,6 @@ body {
       #d7d7d7 1px,
       #d7d7d7 4px
     );
-  color: var(--ink);
 }
 
 /* Papierstruktur / Paper texture */
@@ -42,12 +42,11 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  pointer-events: none;
-  opacity: .12;
-  background-image:
-    radial-gradient(circle, #000 1px, transparent 1px);
-  background-size: 6px 6px;
   z-index: 9999;
+  pointer-events: none;
+  opacity: .1;
+  background-image: radial-gradient(circle, #000 1px, transparent 1px);
+  background-size: 6px 6px;
 }
 
 a {
@@ -62,35 +61,35 @@ select {
   font: inherit;
 }
 
-/* Manga-Seite / Manga page */
+/* Seitenrahmen / Page frame */
 .page {
   width: min(1180px, calc(100% - 24px));
   margin: 24px auto 70px;
   padding: 24px;
+  position: relative;
   background: var(--paper);
   border: 4px solid var(--ink);
   box-shadow: 12px 12px 0 rgba(0,0,0,.25);
-  position: relative;
 }
 
 .page::after {
   content: "";
   position: absolute;
   inset: 10px;
-  border: 1px solid rgba(0,0,0,.15);
+  border: 1px solid rgba(0,0,0,.12);
   pointer-events: none;
 }
 
-/* Kopfzeile / Header */
+/* Navigation / Navigation */
 .site-header {
   width: min(1180px, calc(100% - 24px));
   margin: 14px auto 0;
-  background: var(--paper);
-  border: 4px solid var(--ink);
-  box-shadow: 8px 8px 0 rgba(0,0,0,.22);
   position: sticky;
   top: 10px;
   z-index: 100;
+  background: var(--paper);
+  border: 4px solid var(--ink);
+  box-shadow: 8px 8px 0 rgba(0,0,0,.22);
 }
 
 .nav {
@@ -148,94 +147,24 @@ select {
 }
 
 .user-email {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: .8rem;
   color: var(--gray);
 }
 
-/* Hero als Manga-Cover / Hero as manga cover */
-.hero {
-  min-height: 560px;
-  padding: clamp(30px, 8vw, 90px);
-  position: relative;
-  overflow: hidden;
-  border: 5px solid var(--ink);
-  background:
-    linear-gradient(120deg, rgba(255,255,255,.95) 0 58%, transparent 58%),
-    repeating-radial-gradient(
-      circle at 85% 50%,
-      #111 0 2px,
-      transparent 2px 8px
-    ),
-    var(--paper-dark);
-}
-
-.hero::before {
-  content: "";
-  position: absolute;
-  right: -10%;
-  top: 0;
-  width: 55%;
-  height: 100%;
-  opacity: .17;
-  background:
-    repeating-linear-gradient(
-      -18deg,
-      #000 0 3px,
-      transparent 3px 14px
-    );
-  transform: skewX(-8deg);
-}
-
-.hero::after {
-  content: "漫画";
-  position: absolute;
-  right: 3%;
-  bottom: -5%;
-  font-size: clamp(9rem, 24vw, 22rem);
-  font-weight: 1000;
-  line-height: 1;
-  color: rgba(0,0,0,.06);
-  transform: rotate(-8deg);
-}
-
+/* Wiederverwendbare Elemente / Shared elements */
 .hero-eyebrow {
   display: inline-block;
   margin: 0 0 12px;
   padding: 5px 10px;
   background: var(--ink);
-  color: #fff;
+  color: white;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: .12em;
   transform: rotate(-1deg);
-}
-
-.hero-title {
-  max-width: 760px;
-  margin: 0;
-  font-size: clamp(4rem, 12vw, 9rem);
-  line-height: .8;
-  letter-spacing: -.08em;
-  text-transform: uppercase;
-  position: relative;
-  z-index: 1;
-}
-
-.hero-title::after {
-  content: "!!";
-  color: var(--red);
-  font-size: .35em;
-  vertical-align: top;
-  margin-left: 8px;
-}
-
-.hero-subtitle {
-  max-width: 600px;
-  margin-top: 24px;
-  font-size: 1.05rem;
-  line-height: 1.7;
-  position: relative;
-  z-index: 1;
 }
 
 .hero-actions {
@@ -243,18 +172,32 @@ select {
   flex-wrap: wrap;
   gap: 14px;
   margin-top: 28px;
-  position: relative;
-  z-index: 1;
 }
 
-/* Manga-Buttons / Manga buttons */
+.section-title {
+  margin: 18px 0 26px;
+  font-size: clamp(2.4rem, 6vw, 5rem);
+  line-height: .9;
+  letter-spacing: -.06em;
+  text-transform: uppercase;
+}
+
+.section-title span {
+  color: var(--red);
+}
+
+.muted {
+  color: var(--gray);
+}
+
+/* Buttons / Buttons */
 .primary-button,
 .secondary-button {
+  min-height: 46px;
+  padding: 0 18px;
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  min-height: 46px;
-  padding: 0 18px;
   border: 3px solid var(--ink);
   font-weight: 1000;
   text-transform: uppercase;
@@ -281,28 +224,20 @@ select {
   box-shadow: 1px 1px 0 var(--ink);
 }
 
-/* Überschriften / Headings */
-.section-title {
-  margin: 18px 0 26px;
-  font-size: clamp(2.4rem, 6vw, 5rem);
-  line-height: .9;
-  letter-spacing: -.06em;
-  text-transform: uppercase;
+.primary-button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
 }
 
-.section-title span {
-  color: var(--red);
-}
-
-/* Manga-Panel / Manga panel */
+/* Panels / Panels */
 .panel {
-  position: relative;
   margin-top: 28px;
   padding: 24px;
+  position: relative;
+  overflow: hidden;
   background: white;
   border: 4px solid var(--ink);
   box-shadow: 7px 7px 0 rgba(0,0,0,.18);
-  overflow: hidden;
 }
 
 .panel::before {
@@ -312,7 +247,7 @@ select {
   right: 0;
   width: 120px;
   height: 120px;
-  opacity: .07;
+  opacity: .06;
   background:
     repeating-radial-gradient(
       circle,
@@ -328,29 +263,28 @@ select {
   letter-spacing: -.04em;
 }
 
-/* Suchbereich / Search area */
+/* Suche / Search */
 .search-form {
+  margin-bottom: 28px;
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 12px;
-  margin-bottom: 28px;
 }
 
 .search-input {
   min-height: 52px;
   padding: 0 16px;
   border: 3px solid var(--ink);
-  background: #fff;
+  background: white;
   color: var(--ink);
   outline: none;
-  box-shadow: inset 0 -4px 0 rgba(0,0,0,.05);
 }
 
 .search-input:focus {
   border-color: var(--red);
 }
 
-/* Manga-Grid / Manga grid */
+/* Manga Grid / Manga grid */
 .manga-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
@@ -358,13 +292,12 @@ select {
 }
 
 .manga-card {
+  position: relative;
+  overflow: hidden;
   background: white;
   border: 4px solid var(--ink);
   box-shadow: 6px 6px 0 rgba(0,0,0,.2);
-  overflow: hidden;
-  transition:
-    transform .22s ease,
-    box-shadow .22s ease;
+  transition: transform .22s ease, box-shadow .22s ease;
 }
 
 .manga-card:nth-child(odd) {
@@ -380,11 +313,30 @@ select {
   box-shadow: 10px 10px 0 var(--red);
 }
 
+.manga-card::after {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  opacity: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      -18deg,
+      transparent 0 18px,
+      rgba(0,0,0,.12) 18px 20px
+    );
+  transition: opacity .2s ease;
+}
+
+.manga-card:hover::after {
+  opacity: .3;
+}
+
 .manga-card-image {
   width: 100%;
   aspect-ratio: 2 / 3;
-  object-fit: cover;
   display: block;
+  object-fit: cover;
   filter: contrast(1.08) saturate(.82);
   border-bottom: 4px solid var(--ink);
 }
@@ -408,21 +360,208 @@ select {
   transform: rotate(-2deg);
 }
 
+/* Hot Manga / Hot manga */
+.hot-section {
+  position: relative;
+}
+
+.hot-section-top {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.hot-heading {
+  margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 30px;
+}
+
+.hot-heading .section-title {
+  margin-bottom: 12px;
+}
+
+.hot-heading .muted {
+  max-width: 630px;
+  line-height: 1.6;
+}
+
+.hot-sfx {
+  padding: 12px 16px;
+  background: var(--red);
+  color: white;
+  border: 4px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  font-size: 1.5rem;
+  font-weight: 1000;
+  transform: rotate(5deg);
+}
+
+.home-hot-grid {
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+
+.hot-image-wrapper {
+  position: relative;
+}
+
+.hot-label {
+  position: absolute;
+  top: 10px;
+  right: 8px;
+  z-index: 2;
+  padding: 5px 9px;
+  background: var(--red);
+  color: white;
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: .8rem;
+  font-weight: 1000;
+  transform: rotate(5deg);
+}
+
+.hot-card:nth-child(3n + 1) {
+  transform: rotate(-.6deg);
+}
+
+.hot-card:nth-child(3n + 2) {
+  transform: rotate(.5deg);
+}
+
+.hot-card:nth-child(3n) {
+  transform: rotate(-.2deg);
+}
+
+.hot-card:hover {
+  transform: translateY(-9px) rotate(-1deg) scale(1.02);
+}
+
+.hot-genres {
+  margin: 10px 0 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.hot-genres .genre-tag {
+  font-size: .68rem;
+}
+
+.hot-details {
+  display: inline-block;
+  font-weight: 1000;
+  text-transform: uppercase;
+  border-bottom: 3px solid var(--red);
+}
+
+/* Startseiten-Intro / Home intro */
+.home-intro {
+  margin-top: 70px;
+  min-height: 320px;
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  overflow: hidden;
+  background: white;
+  border: 5px solid var(--ink);
+}
+
+.home-intro-content {
+  padding: clamp(28px, 5vw, 56px);
+}
+
+.home-intro-title {
+  margin: 10px 0 18px;
+  font-size: clamp(3rem, 7vw, 5.5rem);
+  line-height: .82;
+  letter-spacing: -.07em;
+  text-transform: uppercase;
+}
+
+.home-intro-text {
+  max-width: 580px;
+  line-height: 1.7;
+  font-weight: 700;
+}
+
+.home-intro-art {
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+  background:
+    repeating-radial-gradient(
+      circle,
+      #111 0 2px,
+      transparent 2px 9px
+    ),
+    var(--paper-dark);
+  border-left: 5px solid var(--ink);
+}
+
+.home-intro-art::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background:
+    repeating-linear-gradient(
+      -20deg,
+      transparent 0 16px,
+      rgba(0,0,0,.16) 16px 19px
+    );
+  transform: rotate(-8deg);
+}
+
+.home-intro-art span {
+  position: relative;
+  z-index: 2;
+  font-size: clamp(7rem, 16vw, 13rem);
+  font-weight: 1000;
+  opacity: .13;
+  transform: rotate(-7deg);
+}
+
+/* Startseiten-Funktionen / Home features */
+.home-features {
+  margin-top: 70px;
+}
+
+.home-feature {
+  margin-top: 0;
+  min-height: 190px;
+}
+
+.feature-number {
+  display: inline-block;
+  margin-bottom: 14px;
+  font-size: 2.5rem;
+  font-weight: 1000;
+  color: var(--red);
+  transform: rotate(-3deg);
+}
+
+.home-feature h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  text-transform: uppercase;
+}
+
 /* Manga-Details / Manga details */
 .manga-banner {
   width: 100%;
   max-height: 320px;
-  object-fit: cover;
   display: block;
+  object-fit: cover;
   border: 4px solid var(--ink);
   filter: contrast(1.08) saturate(.78);
 }
 
 .manga-detail-grid {
+  margin-top: 24px;
   display: grid;
   grid-template-columns: minmax(220px, 320px) 1fr;
   gap: 38px;
-  margin-top: 24px;
 }
 
 .manga-cover-large {
@@ -433,10 +572,10 @@ select {
 }
 
 .manga-detail-content {
-  background: #fff;
-  border: 4px solid var(--ink);
   padding: 24px;
   position: relative;
+  background: white;
+  border: 4px solid var(--ink);
 }
 
 .manga-detail-content::after {
@@ -461,10 +600,10 @@ select {
 }
 
 .genre-list {
+  margin: 18px 0;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 18px 0;
 }
 
 .genre-tag {
@@ -476,11 +615,11 @@ select {
   transform: rotate(-1deg);
 }
 
-/* Kommentar als Sprechblase / Comment as speech bubble */
+/* Kommentare / Comments */
 .comment {
-  position: relative;
   margin-top: 22px;
   padding: 18px 20px;
+  position: relative;
   background: white;
   border: 3px solid var(--ink);
   border-radius: 18px;
@@ -500,10 +639,10 @@ select {
 }
 
 .comment-head {
+  margin-bottom: 8px;
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 8px;
 }
 
 .spoiler-badge {
@@ -545,18 +684,281 @@ select {
   outline: none;
 }
 
+.form-card input:focus,
+.form-card textarea:focus,
+.form-card select:focus,
+.panel input:focus,
+.panel textarea:focus,
+.panel select:focus {
+  border-color: var(--red);
+}
+
 .form-card textarea,
 .panel textarea {
   min-height: 120px;
   resize: vertical;
 }
 
-/* Hilfstexte / Helper text */
-.muted {
-  color: var(--gray);
+/* Login und Registrierung / Login and registration */
+.auth-layout {
+  min-height: 590px;
+  display: grid;
+  grid-template-columns: 1.05fr .95fr;
+  gap: 28px;
+  align-items: stretch;
 }
 
-/* Manga-Reveal / Manga reveal */
+.auth-intro {
+  padding: clamp(28px, 5vw, 55px);
+  position: relative;
+  overflow: hidden;
+  border: 5px solid var(--ink);
+  background:
+    repeating-linear-gradient(
+      -22deg,
+      transparent 0 15px,
+      rgba(0,0,0,.13) 15px 18px
+    ),
+    var(--paper-dark);
+}
+
+.auth-intro::before {
+  content: "";
+  position: absolute;
+  right: -12%;
+  top: -10%;
+  width: 60%;
+  height: 120%;
+  opacity: .15;
+  background:
+    repeating-radial-gradient(
+      circle,
+      #000 0 2px,
+      transparent 2px 8px
+    );
+  transform: rotate(8deg);
+}
+
+.auth-login::after {
+  content: "ログイン";
+}
+
+.auth-register::after {
+  content: "登録";
+}
+
+.auth-intro::after {
+  position: absolute;
+  right: -18px;
+  bottom: -28px;
+  font-size: clamp(5rem, 10vw, 9rem);
+  font-weight: 1000;
+  line-height: 1;
+  opacity: .07;
+  transform: rotate(-7deg);
+  pointer-events: none;
+}
+
+.auth-copy {
+  width: min(520px, 92%);
+  padding: 24px;
+  position: relative;
+  z-index: 2;
+  background: rgba(245,241,231,.94);
+  border: 4px solid var(--ink);
+  box-shadow: 7px 7px 0 rgba(0,0,0,.18);
+}
+
+.auth-title {
+  margin: 12px 0 18px;
+  font-size: clamp(3rem, 5vw, 5.2rem);
+  line-height: .86;
+  letter-spacing: -.07em;
+  text-transform: uppercase;
+}
+
+.auth-title span {
+  color: var(--red);
+}
+
+.auth-text {
+  max-width: 470px;
+  margin: 0;
+  line-height: 1.65;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.auth-sfx {
+  position: absolute;
+  right: 18px;
+  top: 22px;
+  z-index: 3;
+  padding: 7px 12px;
+  background: var(--red);
+  color: white;
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  font-size: 1.05rem;
+  font-weight: 1000;
+  transform: rotate(5deg);
+}
+
+.auth-card {
+  width: 100%;
+  margin: 0;
+  align-self: stretch;
+  position: relative;
+  z-index: 2;
+}
+
+.auth-card form {
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-card label {
+  margin-top: 6px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.auth-submit {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.auth-message {
+  margin-top: 18px;
+  padding: 12px 14px;
+  background: var(--paper-dark);
+  border: 3px solid var(--ink);
+  font-weight: 800;
+}
+
+.auth-switch {
+  margin-top: 22px;
+  font-weight: 700;
+}
+
+.auth-switch a {
+  color: var(--red);
+  font-weight: 1000;
+}
+
+.auth-switch a:hover {
+  text-decoration: underline;
+}
+
+/* Profil / Profile */
+.profile-hero {
+  padding: 28px;
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 28px;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      120deg,
+      rgba(255,255,255,.96) 0 65%,
+      transparent 65%
+    ),
+    repeating-linear-gradient(
+      -20deg,
+      #111 0 3px,
+      transparent 3px 15px
+    ),
+    var(--paper-dark);
+  border: 5px solid var(--ink);
+}
+
+.profile-avatar {
+  width: 120px;
+  height: 120px;
+  display: grid;
+  place-items: center;
+  background: var(--red);
+  color: white;
+  border: 5px solid var(--ink);
+  box-shadow: 7px 7px 0 var(--ink);
+  font-size: 4rem;
+  font-weight: 1000;
+  transform: rotate(-2deg);
+}
+
+.profile-title {
+  margin: 8px 0 12px;
+  font-size: clamp(2.8rem, 7vw, 5.5rem);
+  line-height: .9;
+  letter-spacing: -.06em;
+  text-transform: uppercase;
+}
+
+.profile-list {
+  display: grid;
+  gap: 14px;
+}
+
+.profile-entry {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  background: white;
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 rgba(0,0,0,.16);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.profile-entry:hover {
+  transform: translate(-3px, -3px) rotate(-.3deg);
+  box-shadow: 7px 7px 0 var(--red);
+}
+
+.profile-entry p {
+  margin: 6px 0;
+}
+
+.profile-rating {
+  min-width: 72px;
+  padding: 8px 10px;
+  text-align: center;
+  background: var(--ink);
+  color: white;
+  border: 3px solid var(--ink);
+  font-size: 1.1rem;
+  font-weight: 1000;
+  transform: rotate(2deg);
+}
+
+.profile-comment-entry {
+  align-items: flex-start;
+}
+
+.profile-manga-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-comment-entry .profile-manga-info {
+  align-items: flex-start;
+}
+
+.profile-manga-cover {
+  width: 58px;
+  height: 82px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 rgba(0,0,0,.18);
+  transform: rotate(-1deg);
+}
+
+/* Animation / Animation */
 @keyframes panelPop {
   0% {
     opacity: 0;
@@ -573,33 +975,15 @@ select {
   }
 }
 
-.hero,
 .panel,
-.manga-card {
+.manga-card,
+.auth-intro,
+.auth-card,
+.home-intro {
   animation: panelPop .35s ease both;
 }
 
-/* Speedlines beim Hover / Speedlines on hover */
-.manga-card::after {
-  content: "";
-  position: absolute;
-  inset: -30%;
-  pointer-events: none;
-  opacity: 0;
-  background:
-    repeating-linear-gradient(
-      -18deg,
-      transparent 0 18px,
-      rgba(0,0,0,.12) 18px 20px
-    );
-  transition: opacity .2s ease;
-}
-
-.manga-card:hover::after {
-  opacity: .35;
-}
-
-/* Mobil / Mobile */
+/* Tablet und Mobil / Tablet and mobile */
 @media (max-width: 800px) {
   .site-header {
     position: static;
@@ -621,6 +1005,10 @@ select {
     padding: 16px;
   }
 
+  .search-form {
+    grid-template-columns: 1fr;
+  }
+
   .manga-detail-grid {
     grid-template-columns: 1fr;
   }
@@ -629,12 +1017,64 @@ select {
     width: min(270px, 85%);
   }
 
-  .search-form {
+  .hot-heading {
+    flex-direction: column;
+  }
+
+  .hot-sfx {
+    align-self: flex-end;
+  }
+
+  .home-intro {
     grid-template-columns: 1fr;
   }
 
-  .hero {
-    min-height: 470px;
+  .home-intro-art {
+    min-height: 220px;
+    border-left: 0;
+    border-top: 5px solid var(--ink);
+  }
+
+  .auth-layout {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .auth-intro {
+    min-height: 380px;
+  }
+
+  .auth-copy {
+    width: 95%;
+  }
+
+  .auth-title {
+    font-size: clamp(2.8rem, 13vw, 4.4rem);
+  }
+
+  .profile-hero {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .profile-avatar {
+    width: 95px;
+    height: 95px;
+    font-size: 3rem;
+  }
+
+  .profile-entry {
+    align-items: flex-start;
+  }
+
+  .profile-manga-cover {
+    width: 48px;
+    height: 68px;
+  }
+
+  .profile-manga-info {
+    align-items: flex-start;
   }
 }
 

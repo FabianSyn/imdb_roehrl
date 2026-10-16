@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Link } from "react-router-dom"
 import { supabase } from "../services/supabase"
 
 // Registrierung / Registration
@@ -30,33 +31,86 @@ export default function Register() {
   }
 
   return (
-    <section>
-      <h1>Registrieren</h1>
+    <main className="page">
+      <section className="auth-layout">
+        <div className="auth-intro auth-register">
+          <div className="auth-copy">
+            <p className="hero-eyebrow">Join the Community</p>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          placeholder="E-Mail"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-        />
+            <h1 className="auth-title">
+              Join
+              <br />
+              IM<span>DB!</span>
+            </h1>
 
-        <input
-          type="password"
-          placeholder="Passwort"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          minLength="6"
-          required
-        />
+            <p className="auth-text">
+              Erstelle deinen Account, bewerte deine Lieblings-Manga und diskutiere mit anderen Fans über Geschichten, Charaktere und Kapitel.
+            </p>
+          </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Wird registriert..." : "Registrieren"}
-        </button>
-      </form>
+          <div className="auth-sfx">
+            JOIN!
+          </div>
+        </div>
 
-      {message && <p>{message}</p>}
-    </section>
+        <div className="form-card auth-card">
+          <p className="hero-eyebrow">New Member</p>
+
+          <h2 className="panel-title">
+            Registrieren
+          </h2>
+
+          <form onSubmit={handleSubmit}>
+            <label htmlFor="email">
+              E-Mail
+            </label>
+
+            <input
+              id="email"
+              type="email"
+              placeholder="deine@email.de"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+
+            <label htmlFor="password">
+              Passwort
+            </label>
+
+            <input
+              id="password"
+              type="password"
+              placeholder="Mindestens 6 Zeichen"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              minLength="6"
+              required
+            />
+
+            <button
+              className="primary-button auth-submit"
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? "Wird registriert..." : "Account erstellen"}
+            </button>
+          </form>
+
+          {message && (
+            <div className="auth-message">
+              {message}
+            </div>
+          )}
+
+          <p className="auth-switch">
+            Bereits registriert?{" "}
+            <Link to="/login">
+              Zum Login →
+            </Link>
+          </p>
+        </div>
+      </section>
+    </main>
   )
 }
