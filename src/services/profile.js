@@ -1,6 +1,17 @@
+
+/**
+ * Dieser Service verwaltet persönliche Benutzerdaten in Supabase.
+ * Er lädt Profilinformationen und Aktivitäten und ermöglicht
+ * das Aktualisieren des Benutzerprofils.
+ */
+
 import { supabase } from "./supabase"
 
-// Profildaten laden / Load profile data
+/**
+ * Lädt die Profildaten eines bestimmten Benutzers.
+ * eq() sucht nach der Benutzer-ID und single() gibt
+ * den gefundenen Datensatz als einzelnes Objekt zurück.
+ */
 export async function getProfile(userId) {
   const { data, error } = await supabase
     .from("profiles")
@@ -12,7 +23,11 @@ export async function getProfile(userId) {
   return data
 }
 
-// Eigene Bewertungen laden / Load own ratings
+/**
+ * Lädt alle Manga-Bewertungen eines bestimmten Benutzers.
+ * eq() filtert nach der Benutzer-ID und order() sortiert
+ * die Bewertungen nach dem letzten Bearbeitungsdatum.
+ */
 export async function getUserRatings(userId) {
   const { data, error } = await supabase
     .from("ratings")
@@ -24,7 +39,11 @@ export async function getUserRatings(userId) {
   return data
 }
 
-// Eigene Kommentare laden / Load own comments
+/**
+ * Lädt alle Manga-Kommentare eines bestimmten Benutzers.
+ * select() bestimmt die benötigten Spalten und order()
+ * zeigt die zuletzt bearbeiteten Kommentare zuerst an.
+ */
 export async function getUserComments(userId) {
   const { data, error } = await supabase
     .from("comments")
@@ -36,7 +55,11 @@ export async function getUserComments(userId) {
   return data
 }
 
-// Profil speichern / Save profile
+/**
+ * Aktualisiert Benutzername und Avatar-Adresse in Supabase.
+ * update() speichert die neuen Werte, eq() wählt das Profil
+ * anhand der Benutzer-ID aus und updated_at dokumentiert die Änderung.
+ */
 export async function updateProfile(userId, username, avatarUrl) {
   const { error } = await supabase
     .from("profiles")

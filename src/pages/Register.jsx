@@ -1,14 +1,30 @@
+
+/**
+ * Diese Seite ermöglicht neuen Benutzern, sich mit ihrer
+ * E-Mail-Adresse und einem Passwort bei IMDB zu registrieren.
+ */
+
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { supabase } from "../services/supabase"
 
-// Registrierung / Registration
+/**
+ * Erstellt das Registrierungsformular und verwaltet die Eingaben.
+ * useState speichert E-Mail, Passwort, Rückmeldungen und Ladezustand.
+ * Die Registrierung erfolgt über den Authentifizierungsdienst von Supabase.
+ */
 export default function Register() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [message, setMessage] = useState("")
   const [loading, setLoading] = useState(false)
 
+  /**
+   * Verarbeitet die Registrierung über supabase.auth.signUp().
+   * preventDefault() verhindert das Neuladen der Seite und await wartet
+   * auf die Antwort von Supabase. Bei Erfolg werden die Felder geleert,
+   * bei einem Fehler wird die entsprechende Meldung angezeigt.
+   */
   const handleSubmit = async (event) => {
     event.preventDefault()
     setLoading(true)

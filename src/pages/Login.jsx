@@ -1,8 +1,18 @@
+
+/**
+ * Diese Seite ermöglicht Benutzern, sich mit ihrer E-Mail-Adresse
+ * und ihrem Passwort über Supabase anzumelden.
+ */
+
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { supabase } from "../services/supabase"
 
-// Login / Login
+/**
+ * Erstellt das Login-Formular und verwaltet dessen Eingaben.
+ * useState speichert E-Mail, Passwort, Fehlermeldung und Ladezustand.
+ * useNavigate ermöglicht die Weiterleitung nach erfolgreicher Anmeldung.
+ */
 export default function Login() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -10,6 +20,12 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
+  /**
+   * Verarbeitet das Absenden des Login-Formulars.
+   * preventDefault() verhindert das Neuladen der Seite.
+   * signInWithPassword() überprüft die Zugangsdaten über Supabase.
+   * Bei Erfolg leitet navigate() zur Startseite weiter.
+   */
   const handleSubmit = async (event) => {
     event.preventDefault()
     setLoading(true)

@@ -1,6 +1,16 @@
+
+/**
+ * Dieser Service verwaltet Manga-Kommentare in Supabase.
+ * Kommentare können geladen, erstellt, bearbeitet und gelöscht werden.
+ */
+
 import { supabase } from "./supabase"
 
-// Manga-Kommentare laden / Load manga comments
+/**
+ * Lädt alle allgemeinen Kommentare eines bestimmten Manga aus Supabase.
+ * select() bestimmt die benötigten Daten einschließlich des Benutzernamens,
+ * eq() und is() filtern die Kommentare und order() sortiert sie nach Datum.
+ */
 export async function getComments(mangaId) {
   const { data, error } = await supabase
     .from("comments")
@@ -23,7 +33,11 @@ export async function getComments(mangaId) {
   return data
 }
 
-// Kommentar speichern / Save comment
+/**
+ * Speichert einen neuen Kommentar in der Supabase-Datenbank.
+ * insert() erstellt den Datensatz mit Manga-ID, Benutzer-ID,
+ * Kommentartext und Spoiler-Markierung.
+ */
 export async function addComment(mangaId, userId, content, spoiler = false) {
   const { error } = await supabase
     .from("comments")
@@ -38,7 +52,11 @@ export async function addComment(mangaId, userId, content, spoiler = false) {
   if (error) throw error
 }
 
-// Kommentar bearbeiten / Update comment
+/**
+ * Aktualisiert einen bestehenden Kommentar in Supabase.
+ * update() verändert Inhalt und Spoiler-Status, während eq()
+ * den Datensatz auf die Kommentar-ID und Benutzer-ID einschränkt.
+ */
 export async function updateComment(commentId, userId, content, spoiler) {
   const { error } = await supabase
     .from("comments")
@@ -53,7 +71,11 @@ export async function updateComment(commentId, userId, content, spoiler) {
   if (error) throw error
 }
 
-// Kommentar löschen / Delete comment
+/**
+ * Löscht einen bestehenden Kommentar aus Supabase.
+ * delete() entfernt den Datensatz, während eq() die Anfrage
+ * auf den angegebenen Kommentar des Benutzers begrenzt.
+ */
 export async function deleteComment(commentId, userId) {
   const { error } = await supabase
     .from("comments")

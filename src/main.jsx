@@ -1,10 +1,11 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
+
+// BrowserRouter verwendet die Browser-URL, ohne bei jedem Seitenwechsel neu zu laden.
 import { BrowserRouter } from "react-router-dom"
 import "./index.css"
 import App from "./App.jsx"
 
-// App starten / Start app
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
