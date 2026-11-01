@@ -1,219 +1,150 @@
 
 /**
- * Diese Seite zeigt alle Informationen zu einem Manga an und ermöglicht
- * angemeldeten Benutzern, Bewertungen und Kommentare zu verwalten.
+ * Diese Seite zeigt alle Informationen zu einem Manga an.
+ * Eigene Hooks verwalten Manga-Daten, Anmeldung, Bewertungen
+ * und Kommentare. Benutzer können Bewertungen und Kommentare
+ * erstellen, bearbeiten und löschen.
  */
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useParams, Link } from "react-router-dom"
-import { supabase } from "../services/supabase"
-import { getManga } from "../services/anilist"
-import { getUserRating, getAverageRating, saveRating } from "../services/ratings"
-import { getComments, addComment, updateComment, deleteComment } from "../services/comments"
+import useAuth from "../hooks/useAuth"
+import useManga from "../hooks/useManga"
+import useMangaRatings from "../hooks/useMangaRatings"
+import useComments from "../hooks/useComments"
 import SpoilerContent from "../components/SpoilerContent"
 
 /**
- * Verwaltet Manga-Informationen, Bewertungen, Kommentare und deren Bearbeitung.
- * useParams liest die Manga-ID aus der URL, useState speichert die Daten und
- * Eingaben, während useEffect die Daten über AniList und Supabase lädt.
+ * Verwaltet die Manga-Detailseite mithilfe mehrerer Custom Hooks.
+ * useParams() liest die Manga-ID aus der URL.
+ * Die Hooks übernehmen das Laden und Speichern der Daten,
+ * während useState() die lokalen Formulareingaben verwaltet.
  */
 export default function MangaDetails() {
   const { id } = useParams()
 
-  // Speichert Manga-Daten, Benutzer, Bewertungen und Kommentare.
-  const [manga, setManga] = useState(null)
-  const [user, setUser] = useState(null)
-  const [rating, setRating] = useState("")
-  const [averageRating, setAverageRating] = useState(null)
-  const [comments, setComments] = useState([])
+  // Lädt Manga-Informationen und den angemeldeten Benutzer.
+  const {
+    manga,
+    loading: mangaLoading,
+    error: mangaError
+  } = useManga(id)
 
-  // Speichert Eingaben für neue und zu bearbeitende Kommentare.
+  const {
+    user,
+    loading: authLoading
+  } = useAuth()
+
+  // Lädt und verwaltet persönliche und durchschnittliche Bewertungen.
+  const {
+    rating,
+    setRating,
+    averageRating,
+    loading: ratingsLoading,
+    saving: savingRating,
+    error: ratingsError,
+    message,
+    submitRating
+  } = useMangaRatings(id, user?.id)
+
+  // Lädt Kommentare und stellt Funktionen zum Ändern bereit.
+  const {
+    comments,
+    loading: commentsLoading,
+    saving: savingComment,
+    error: commentsError,
+    createComment,
+    editComment,
+    removeComment
+  } = useComments(id, user?.id)
+
+  // Speichert die Eingaben für neue und zu bearbeitende Kommentare.
   const [commentText, setCommentText] = useState("")
   const [spoiler, setSpoiler] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState("")
   const [editSpoiler, setEditSpoiler] = useState(false)
 
-  // Verwaltet Ladezustände und Rückmeldungen.
-  const [loading, setLoading] = useState(true)
-  const [savingRating, setSavingRating] = useState(false)
-  const [savingComment, setSavingComment] = useState(false)
-  const [error, setError] = useState("")
-  const [message, setMessage] = useState("")
-  const [commentError, setCommentError] = useState("")
-
   /**
-   * Lädt beim Öffnen oder Wechseln eines Manga alle benötigten Daten.
-   * Promise.all() lädt Manga, Benutzer, Durchschnittsbewertung und Kommentare parallel. 
-   * Anschließend wird gegebenenfalls die eigene Bewertung geladen.
-   * active verhindert State-Updates nach dem Verlassen der Komponente.
-   */
-  useEffect(() => {
-    let active = true
-
-    const loadDetails = async () => {
-      setLoading(true)
-      setError("")
-      setManga(null)
-      setRating("")
-      setComments([])
-
-      try {
-        const [mangaData, auth, average, commentData] = await Promise.all([
-          getManga(id),
-          supabase.auth.getUser(),
-          getAverageRating(Number(id)),
-          getComments(Number(id))
-        ])
-
-        if (!active) return
-        if (auth.error) throw auth.error
-
-        setManga(mangaData)
-        setUser(auth.data.user)
-        setAverageRating(average)
-        setComments(commentData)
-
-        if (auth.data.user) {
-          const ownRating = await getUserRating(Number(id), auth.data.user.id)
-
-          if (active && ownRating != null) {
-            setRating(String(
-              typeof ownRating === "object" ? ownRating.rating : ownRating
-            ))
-          }
-        }
-      } catch (err) {
-        if (active) setError(err.message || "Manga konnten nicht geladen werden.")
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-
-    loadDetails()
-    return () => { active = false }
-  }, [id])
-
-  /**
-   * Aktualisiert die Community-Bewertung und die Kommentare.
-   * Beide Supabase-Anfragen werden mit Promise.all() parallel ausgeführt,
-   * damit Änderungen direkt auf der Seite sichtbar werden.
-   */
-  const refreshCommunityData = async () => {
-    const [average, commentData] = await Promise.all([
-      getAverageRating(Number(id)),
-      getComments(Number(id))
-    ])
-    setAverageRating(average)
-    setComments(commentData)
-  }
-
-  /**
-   * Speichert die ausgewählte Bewertung des angemeldeten Benutzers.
-   * saveRating() überträgt die Bewertung an Supabase und
-   * getAverageRating() lädt anschließend den neuen Durchschnitt.
+   * Speichert die ausgewählte Bewertung über useMangaRatings().
+   * preventDefault() verhindert das Neuladen der Seite.
    */
   const handleSaveRating = async (event) => {
     event.preventDefault()
-    if (!user || savingRating || !rating) return
-
-    setSavingRating(true)
-    setMessage("")
-
-    try {
-      await saveRating(Number(id), user.id, Number(rating))
-      setAverageRating(await getAverageRating(Number(id)))
-      setMessage("Deine Bewertung wurde gespeichert.")
-    } catch (err) {
-      setMessage(err.message || "Bewertung konnte nicht gespeichert werden.")
-    } finally {
-      setSavingRating(false)
-    }
+    await submitRating()
   }
 
   /**
-   * Erstellt einen Kommentar über addComment() in Supabase.
-   * trim() entfernt überflüssige Leerzeichen, anschließend werden
-   * die Kommentare neu geladen und das Formular zurückgesetzt.
+   * Erstellt einen neuen Kommentar über useComments().
+   * Nach erfolgreichem Speichern werden die Eingabefelder geleert.
    */
   const handleAddComment = async (event) => {
     event.preventDefault()
-    if (!user || savingComment || !commentText.trim()) return
 
-    setSavingComment(true)
-    setCommentError("")
+    if (!commentText.trim()) return
 
-    try {
-      await addComment(Number(id), user.id, commentText.trim(), spoiler)
-      await refreshCommunityData()
+    const success = await createComment(commentText, spoiler)
+
+    if (success) {
       setCommentText("")
       setSpoiler(false)
-    } catch (err) {
-      setCommentError(err.message || "Kommentar konnte nicht gespeichert werden.")
-    } finally {
-      setSavingComment(false)
     }
   }
 
   /**
-   * Öffnet das Bearbeitungsformular für einen vorhandenen Kommentar.
-   * Die aktuellen Werte werden mit den State-Settern in die
-   * Bearbeitungsfelder übernommen.
+   * Öffnet das Bearbeitungsformular eines Kommentars.
+   * Die aktuellen Werte werden in die lokalen States übernommen.
    */
   const startEditing = (comment) => {
     setEditingId(comment.id)
     setEditText(comment.content)
     setEditSpoiler(Boolean(comment.spoiler))
-    setCommentError("")
   }
 
   /**
-   * Aktualisiert einen bestehenden Kommentar über updateComment().
-   * Nach erfolgreichem Speichern werden die Kommentare neu geladen
-   * und der Bearbeitungsmodus beendet.
+   * Aktualisiert einen vorhandenen Kommentar über useComments().
+   * Nach erfolgreichem Speichern wird der Bearbeitungsmodus beendet.
    */
   const handleUpdateComment = async (event) => {
     event.preventDefault()
-    if (!user || editingId === null || savingComment || !editText.trim()) return
 
-    setSavingComment(true)
-    setCommentError("")
+    if (editingId === null || !editText.trim()) return
 
-    try {
-      await updateComment(editingId, user.id, editText.trim(), editSpoiler)
-      await refreshCommunityData()
+    const success = await editComment(
+      editingId,
+      editText,
+      editSpoiler
+    )
+
+    if (success) {
       setEditingId(null)
       setEditText("")
       setEditSpoiler(false)
-    } catch (err) {
-      setCommentError(err.message || "Kommentar konnte nicht aktualisiert werden.")
-    } finally {
-      setSavingComment(false)
     }
   }
 
   /**
-   * Löscht einen eigenen Kommentar nach einer Bestätigung.
-   * window.confirm() fragt den Benutzer, deleteComment() entfernt den
-   * Eintrag aus Supabase und refreshCommunityData() aktualisiert die Anzeige.
+   * Löscht einen Kommentar nach Bestätigung durch window.confirm().
+   * removeComment() entfernt ihn über den Custom Hook aus Supabase.
    */
   const handleDeleteComment = async (commentId) => {
-    if (!user || savingComment) return
-    if (!window.confirm("Möchtest du diesen Kommentar wirklich löschen?")) return
+    if (!window.confirm("Möchtest du diesen Kommentar wirklich löschen?")) {
+      return
+    }
 
-    setSavingComment(true)
-    setCommentError("")
+    const success = await removeComment(commentId)
 
-    try {
-      await deleteComment(commentId, user.id)
-      await refreshCommunityData()
-      if (editingId === commentId) setEditingId(null)
-    } catch (err) {
-      setCommentError(err.message || "Kommentar konnte nicht gelöscht werden.")
-    } finally {
-      setSavingComment(false)
+    if (success && editingId === commentId) {
+      setEditingId(null)
     }
   }
+
+  // Wartet auf Manga-Daten, Anmeldung, Bewertungen und Kommentare.
+  const loading =
+    mangaLoading ||
+    authLoading ||
+    ratingsLoading ||
+    commentsLoading
 
   if (loading) {
     return (
@@ -223,22 +154,29 @@ export default function MangaDetails() {
     )
   }
 
-  if (error || !manga) {
+  if (mangaError || !manga) {
     return (
       <main className="page">
         <h1>Manga nicht gefunden</h1>
-        <p role="alert">{error || "Dieser Manga konnte nicht geladen werden."}</p>
-        <Link className="primary-button" to="/search">Zur Manga-Suche</Link>
+        <p role="alert">
+          {mangaError || "Dieser Manga konnte nicht geladen werden."}
+        </p>
+        <Link className="primary-button" to="/search">
+          Zur Manga-Suche
+        </Link>
       </main>
     )
   }
 
-  // Verwendet bevorzugt den englischen, ansonsten den japanischen Titel.
-  const title = manga.title?.english || manga.title?.romaji || "Unbekannter Manga"
+  // Verwendet bevorzugt den englischen, sonst den japanischen Titel.
+  const title =
+    manga.title?.english ||
+    manga.title?.romaji ||
+    "Unbekannter Manga"
 
   /**
-   * Formatiert ein AniList-Datum als Tag.Monat.Jahr.
-   * filter(Boolean) entfernt fehlende Datumsbestandteile und
+   * Formatiert AniList-Datumsangaben als Tag.Monat.Jahr.
+   * filter(Boolean) entfernt fehlende Bestandteile,
    * join(".") verbindet die übrigen Werte mit Punkten.
    */
   const formatDate = (date) => {
@@ -282,7 +220,9 @@ export default function MangaDetails() {
 
           <div className="genre-list">
             {(manga.genres || []).map((genre) => (
-              <span className="genre-tag" key={genre}>{genre}</span>
+              <span className="genre-tag" key={genre}>
+                {genre}
+              </span>
             ))}
           </div>
 
@@ -299,17 +239,30 @@ export default function MangaDetails() {
             <div className="manga-score-box manga-score-community">
               <span>IMDB Community</span>
               <strong>
-                {averageRating != null ? `${averageRating}/10` : "N/A"}
+                {averageRating != null
+                  ? `${averageRating}/10`
+                  : "N/A"}
               </strong>
             </div>
           </div>
 
           <div className="manga-facts">
-            <p><strong>Status:</strong> {manga.status?.replaceAll("_", " ") || "Unbekannt"}</p>
-            <p><strong>Kapitel:</strong> {manga.chapters ?? "Unbekannt"}</p>
-            <p><strong>Bände:</strong> {manga.volumes ?? "Unbekannt"}</p>
-            <p><strong>Beginn:</strong> {formatDate(manga.startDate)}</p>
-            <p><strong>Ende:</strong> {formatDate(manga.endDate)}</p>
+            <p>
+              <strong>Status:</strong>{" "}
+              {manga.status?.replaceAll("_", " ") || "Unbekannt"}
+            </p>
+            <p>
+              <strong>Kapitel:</strong> {manga.chapters ?? "Unbekannt"}
+            </p>
+            <p>
+              <strong>Bände:</strong> {manga.volumes ?? "Unbekannt"}
+            </p>
+            <p>
+              <strong>Beginn:</strong> {formatDate(manga.startDate)}
+            </p>
+            <p>
+              <strong>Ende:</strong> {formatDate(manga.endDate)}
+            </p>
           </div>
 
           <h2 className="panel-title">Beschreibung</h2>
@@ -322,12 +275,17 @@ export default function MangaDetails() {
                   .map((line, index) => (
                     <p key={index}>{line || "\u00a0"}</p>
                   ))
-              : <p className="muted">Keine Beschreibung vorhanden.</p>}
+              : (
+                <p className="muted">
+                  Keine Beschreibung vorhanden.
+                </p>
+              )}
           </div>
 
           {manga.staff?.edges?.length > 0 && (
             <div className="manga-staff">
               <h2 className="panel-title">Mitwirkende</h2>
+
               {manga.staff.edges.slice(0, 8).map((edge, index) => (
                 <p key={`${edge.node.id}-${index}`}>
                   <strong>{edge.role}:</strong> {edge.node.name.full}
@@ -345,12 +303,21 @@ export default function MangaDetails() {
 
         {!user ? (
           <p>
-            Du musst <Link className="community-text-link" to="/login">angemeldet</Link> sein,
-            um diesen Manga zu bewerten.
+            Du musst{" "}
+            <Link className="community-text-link" to="/login">
+              angemeldet
+            </Link>{" "}
+            sein, um diesen Manga zu bewerten.
           </p>
         ) : (
-          <form className="manga-rating-form" onSubmit={handleSaveRating}>
-            <label htmlFor="manga-rating">Bewertung von 1 bis 10</label>
+          <form
+            className="manga-rating-form"
+            onSubmit={handleSaveRating}
+          >
+            <label htmlFor="manga-rating">
+              Bewertung von 1 bis 10
+            </label>
+
             <select
               id="manga-rating"
               value={rating}
@@ -358,7 +325,11 @@ export default function MangaDetails() {
               required
             >
               <option value="">Bewertung auswählen</option>
-              {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
+
+              {Array.from(
+                { length: 10 },
+                (_, index) => index + 1
+              ).map((value) => (
                 <option key={value} value={value}>
                   {value}/10
                 </option>
@@ -370,22 +341,31 @@ export default function MangaDetails() {
               type="submit"
               disabled={savingRating}
             >
-              {savingRating ? "Speichern..." : "Bewertung speichern"}
+              {savingRating
+                ? "Speichern..."
+                : "Bewertung speichern"}
             </button>
           </form>
         )}
 
         {message && <p role="status">{message}</p>}
+        {ratingsError && <p role="alert">{ratingsError}</p>}
       </section>
 
       {/* Kommentare erstellen, anzeigen, bearbeiten und löschen */}
       <section className="panel">
         <p className="hero-eyebrow">Manga Discussion</p>
-        <h2 className="panel-title">Kommentare ({comments.length})</h2>
+        <h2 className="panel-title">
+          Kommentare ({comments.length})
+        </h2>
 
         {user ? (
-          <form className="manga-comment-form" onSubmit={handleAddComment}>
+          <form
+            className="manga-comment-form"
+            onSubmit={handleAddComment}
+          >
             <label htmlFor="new-comment">Dein Kommentar</label>
+
             <textarea
               id="new-comment"
               value={commentText}
@@ -409,31 +389,46 @@ export default function MangaDetails() {
               type="submit"
               disabled={savingComment}
             >
-              {savingComment ? "Veröffentlichen..." : "Kommentar veröffentlichen"}
+              {savingComment
+                ? "Veröffentlichen..."
+                : "Kommentar veröffentlichen"}
             </button>
           </form>
         ) : (
           <p>
-            <Link className="community-text-link" to="/login">Melde dich an</Link>,
-            um einen Kommentar zu schreiben.
+            <Link className="community-text-link" to="/login">
+              Melde dich an
+            </Link>
+            , um einen Kommentar zu schreiben.
           </p>
         )}
 
-        {commentError && <p className="auth-message" role="alert">{commentError}</p>}
+        {commentsError && (
+          <p className="auth-message" role="alert">
+            {commentsError}
+          </p>
+        )}
 
-        {comments.length === 0 && (
-          <p className="muted">Noch keine Kommentare vorhanden. Schreibe den ersten!</p>
+        {comments.length === 0 && !commentsError && (
+          <p className="muted">
+            Noch keine Kommentare vorhanden. Schreibe den ersten!
+          </p>
         )}
 
         <div className="manga-comments-list">
           {comments.map((comment) => {
             // Prüft, ob der Kommentar dem angemeldeten Benutzer gehört.
-            const ownComment = Boolean(user && comment.user_id === user.id)
+            const ownComment = Boolean(
+              user && comment.user_id === user.id
+            )
 
             return (
               <article className="comment" key={comment.id}>
                 {editingId === comment.id ? (
-                  <form className="manga-comment-form" onSubmit={handleUpdateComment}>
+                  <form
+                    className="manga-comment-form"
+                    onSubmit={handleUpdateComment}
+                  >
                     <label htmlFor={`edit-comment-${comment.id}`}>
                       Kommentar bearbeiten
                     </label>
@@ -477,22 +472,29 @@ export default function MangaDetails() {
                 ) : (
                   <>
                     <div className="comment-head">
-                      <strong>{comment.profiles?.username || "Manga-Fan"}</strong>
+                      <strong>
+                        {comment.profiles?.username || "Manga-Fan"}
+                      </strong>
+
                       <small className="muted">
                         {new Date(comment.created_at).toLocaleString("de-DE")}
                       </small>
                     </div>
 
-                    {/* Die Komponente zeigt markierte Spoiler erst nach einem Klick. */}
+                    {/* Die Komponente zeigt Spoiler erst nach einem Klick. */}
                     <SpoilerContent
                       key={`${comment.id}-${comment.updated_at}`}
                       spoiler={Boolean(comment.spoiler)}
                     >
-                      <p className="manga-comment-content">{comment.content}</p>
+                      <p className="manga-comment-content">
+                        {comment.content}
+                      </p>
                     </SpoilerContent>
 
                     {comment.updated_at !== comment.created_at && (
-                      <small className="muted">Bearbeitet</small>
+                      <small className="muted">
+                        Bearbeitet
+                      </small>
                     )}
 
                     {ownComment && (
