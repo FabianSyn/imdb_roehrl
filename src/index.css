@@ -2733,3 +2733,168 @@ select {
   outline-offset: 3px;
 }
 
+
+/* Schnelle Navigation zu Bewertung und Kommentaren. */
+.manga-quick-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin: 8px 0 28px;
+}
+
+.manga-quick-nav a {
+  text-align: center;
+}
+
+/* Verhindert, dass beim Springen Überschriften verdeckt werden. */
+#manga-rating-section,
+#manga-comments-section {
+  scroll-margin-top: 110px;
+}
+
+/* Ausklappbare Manga-Informationen. */
+.manga-accordion {
+  margin-top: 16px;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+}
+
+/* Die Überschrift ist der anklickbare Bereich des Accordions. */
+.manga-accordion-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+
+  padding: 16px 18px;
+  background: var(--paper-dark);
+
+  font-size: 1.05rem;
+  font-weight: 1000;
+  text-transform: uppercase;
+
+  cursor: pointer;
+  list-style: none;
+
+  transition: background .2s ease;
+}
+
+/* Entfernt das standardmäßige Browser-Dreieck. */
+.manga-accordion-summary::-webkit-details-marker {
+  display: none;
+}
+
+.manga-accordion-summary::marker {
+  content: "";
+}
+
+.manga-accordion-summary:hover {
+  background: #ded5c4;
+}
+
+/* Pluszeichen rechts in der Überschrift. */
+.manga-accordion-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+
+  background: var(--red);
+  color: white;
+  border: 2px solid var(--ink);
+
+  font-size: 1.4rem;
+  font-weight: 1000;
+  line-height: 1;
+
+  transition: transform .2s ease;
+}
+
+/* Bei geöffnetem Bereich wird das Plus zu einem X gedreht. */
+.manga-accordion[open] .manga-accordion-icon {
+  transform: rotate(45deg);
+}
+
+/* Inhalt, der nach dem Öffnen sichtbar wird. */
+.manga-accordion-content {
+  padding: 18px 20px;
+  background: white;
+  border-top: 3px solid var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.manga-accordion-content p {
+  line-height: 1.65;
+}
+
+.manga-accordion-content p:first-child {
+  margin-top: 0;
+}
+
+.manga-accordion-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Deutliche Tastatur-Markierung für die Accordion-Steuerung. */
+.manga-accordion-summary:focus-visible {
+  outline: 3px solid var(--red);
+  outline-offset: 3px;
+}
+
+/* Tablet und Smartphone */
+@media (max-width: 800px) {
+  #manga-rating-section,
+  #manga-comments-section {
+    scroll-margin-top: 24px;
+  }
+}
+
+@media (max-width: 600px) {
+  .community-founder-label {
+    width: 100%;
+    font-size: .85rem;
+  }
+
+  .manga-quick-nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+
+  .manga-quick-nav a {
+    width: 100%;
+  }
+
+  .manga-accordion {
+    margin-top: 12px;
+    border-width: 2px;
+  }
+
+  .manga-accordion-summary {
+    padding: 12px;
+    font-size: .9rem;
+  }
+
+  .manga-accordion-content {
+    padding: 14px;
+    border-top-width: 2px;
+  }
+
+  .manga-accordion-icon {
+    width: 26px;
+    height: 26px;
+    font-size: 1.2rem;
+  }
+}
+
+/* Berücksichtigt Benutzer, die reduzierte Bewegung bevorzugen. */
+@media (prefers-reduced-motion: reduce) {
+  .manga-accordion-summary,
+  .manga-accordion-icon {
+    transition: none;
+  }
+}
+
