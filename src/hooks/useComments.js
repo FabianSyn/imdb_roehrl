@@ -15,8 +15,8 @@ import {
 
 /**
  * Verwaltet Kommentare eines Manga.
- * useEffect() lädt die Kommentare, useState() speichert Daten
- * und Statuswerte. Nach Änderungen wird die Liste erneut geladen.
+ * useEffect() lädt die Kommentare, useState() speichert Daten und Statuswerte. 
+ * Nach Änderungen wird die Liste erneut geladen.
  */
 export default function useComments(mangaId, userId) {
   const [comments, setComments] = useState([])

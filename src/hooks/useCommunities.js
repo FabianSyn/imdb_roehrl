@@ -1,8 +1,8 @@
 
 /**
  * Dieser Hook verwaltet die Community-Liste der Anwendung.
- * Er lädt Communities aus Supabase und stellt eine Funktion
- * bereit, um die Daten bei Bedarf erneut abzurufen.
+ * Er lädt Communities aus Supabase und stellt eine Funktion bereit, 
+ * um die Daten bei Bedarf erneut abzurufen.
  */
 
 import { useCallback, useEffect, useState } from "react"
@@ -10,8 +10,8 @@ import { getCommunities } from "../services/communities"
 
 /**
  * Lädt Communities und verwaltet Lade- und Fehlerzustände.
- * useCallback() stabilisiert die Ladefunktion, während
- * useEffect() den ersten Ladevorgang startet.
+ * useCallback() stabilisiert die Ladefunktion, 
+ * während useEffect() den ersten Ladevorgang startet.
  */
 export default function useCommunities() {
   const [communities, setCommunities] = useState([])

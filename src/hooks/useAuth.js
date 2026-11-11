@@ -11,8 +11,8 @@ import { supabase } from "../services/supabase"
 
 /**
  * Lädt den aktuellen Benutzer und überwacht Login und Logout.
- * useState speichert Benutzer und Ladezustand. useEffect
- * registriert den Auth-Listener und entfernt ihn beim Aufräumen.
+ * useState speichert Benutzer und Ladezustand. 
+ * useEffect registriert den Auth-Listener und entfernt ihn beim Aufräumen.
  */
 export default function useAuth() {
   const [user, setUser] = useState(null)

@@ -1,17 +1,20 @@
 
 /**
- * Diese Seite zeigt alle Informationen zu einem Manga an.
- * Eigene Hooks verwalten Manga-Daten, Anmeldung, Bewertungen
- * und Kommentare. Benutzer können Bewertungen und Kommentare
- * erstellen, bearbeiten und löschen.
+ * Diese Seite zeigt Informationen zu einem Manga und ermöglicht
+ * angemeldeten Benutzern, Bewertungen und Kommentare zu verwalten.
+ *
+ * Manga-Fakten, Beschreibung und Mitwirkende sind ausklappbar.
+ * Sprunglinks ermöglichen direkten Zugriff auf Bewertung und Kommentare.
  */
 
 import { useState } from "react"
 import { useParams, Link } from "react-router-dom"
+
 import useAuth from "../hooks/useAuth"
 import useManga from "../hooks/useManga"
 import useMangaRatings from "../hooks/useMangaRatings"
 import useComments from "../hooks/useComments"
+
 import SpoilerContent from "../components/SpoilerContent"
 
 /**
@@ -23,19 +26,20 @@ import SpoilerContent from "../components/SpoilerContent"
 export default function MangaDetails() {
   const { id } = useParams()
 
-  // Lädt Manga-Informationen und den angemeldeten Benutzer.
+  // Lädt die Manga-Informationen aus AniList.
   const {
     manga,
     loading: mangaLoading,
     error: mangaError
   } = useManga(id)
 
+  // Lädt den aktuell angemeldeten Benutzer.
   const {
     user,
     loading: authLoading
   } = useAuth()
 
-  // Lädt und verwaltet persönliche und durchschnittliche Bewertungen.
+  // Verwaltet die persönliche Bewertung und den Community-Durchschnitt.
   const {
     rating,
     setRating,
@@ -47,7 +51,7 @@ export default function MangaDetails() {
     submitRating
   } = useMangaRatings(id, user?.id)
 
-  // Lädt Kommentare und stellt Funktionen zum Ändern bereit.
+  // Verwaltet Kommentare und stellt Funktionen zum Ändern bereit.
   const {
     comments,
     loading: commentsLoading,
@@ -58,7 +62,7 @@ export default function MangaDetails() {
     removeComment
   } = useComments(id, user?.id)
 
-  // Speichert die Eingaben für neue und zu bearbeitende Kommentare.
+  // Speichert Eingaben für neue und zu bearbeitende Kommentare.
   const [commentText, setCommentText] = useState("")
   const [spoiler, setSpoiler] = useState(false)
   const [editingId, setEditingId] = useState(null)
@@ -128,7 +132,11 @@ export default function MangaDetails() {
    * removeComment() entfernt ihn über den Custom Hook aus Supabase.
    */
   const handleDeleteComment = async (commentId) => {
-    if (!window.confirm("Möchtest du diesen Kommentar wirklich löschen?")) {
+    if (
+      !window.confirm(
+        "Möchtest du diesen Kommentar wirklich löschen?"
+      )
+    ) {
       return
     }
 
@@ -149,7 +157,9 @@ export default function MangaDetails() {
   if (loading) {
     return (
       <main className="page">
-        <p className="muted">Manga wird geladen...</p>
+        <p className="muted">
+          Manga wird geladen...
+        </p>
       </main>
     )
   }
@@ -158,9 +168,11 @@ export default function MangaDetails() {
     return (
       <main className="page">
         <h1>Manga nicht gefunden</h1>
+
         <p role="alert">
           {mangaError || "Dieser Manga konnte nicht geladen werden."}
         </p>
+
         <Link className="primary-button" to="/search">
           Zur Manga-Suche
         </Link>
@@ -168,7 +180,7 @@ export default function MangaDetails() {
     )
   }
 
-  // Verwendet bevorzugt den englischen, sonst den japanischen Titel.
+  // Verwendet bevorzugt den englischen, sonst den Romaji-Titel.
   const title =
     manga.title?.english ||
     manga.title?.romaji ||
@@ -181,7 +193,12 @@ export default function MangaDetails() {
    */
   const formatDate = (date) => {
     if (!date?.year) return "Unbekannt"
-    return [date.day, date.month, date.year].filter(Boolean).join(".")
+
+    return [
+      date.day,
+      date.month,
+      date.year
+    ].filter(Boolean).join(".")
   }
 
   return (
@@ -190,6 +207,27 @@ export default function MangaDetails() {
         ← Zurück zum Manga-Archiv
       </Link>
 
+      {/* Direkte Navigation zu den wichtigsten Interaktionen. */}
+      <nav
+        className="manga-quick-nav"
+        aria-label="Schnellnavigation zum Manga"
+      >
+        <a
+          className="primary-button"
+          href="#manga-rating-section"
+        >
+          ★ Manga bewerten
+        </a>
+
+        <a
+          className="secondary-button"
+          href="#manga-comments-section"
+        >
+          Kommentare ({comments.length}) ↓
+        </a>
+      </nav>
+
+      {/* Banner aus der AniList-API */}
       {manga.bannerImage && (
         <img
           className="manga-banner"
@@ -198,7 +236,7 @@ export default function MangaDetails() {
         />
       )}
 
-      {/* Manga-Informationen aus der AniList-API */}
+      {/* Manga-Titel, Cover und die wichtigsten Informationen. */}
       <section className="manga-detail-grid">
         <div>
           {manga.coverImage?.extraLarge && (
@@ -212,23 +250,34 @@ export default function MangaDetails() {
 
         <div className="manga-detail-content">
           <p className="hero-eyebrow">Manga Details</p>
-          <h1 className="manga-title">{title}</h1>
+
+          <h1 className="manga-title">
+            {title}
+          </h1>
 
           {manga.title?.native && (
-            <p className="muted">{manga.title.native}</p>
+            <p className="muted">
+              {manga.title.native}
+            </p>
           )}
 
+          {/* Genres bleiben direkt sichtbar. */}
           <div className="genre-list">
             {(manga.genres || []).map((genre) => (
-              <span className="genre-tag" key={genre}>
+              <span
+                className="genre-tag"
+                key={genre}
+              >
                 {genre}
               </span>
             ))}
           </div>
 
+          {/* AniList- und Community-Bewertung bleiben immer sichtbar. */}
           <div className="manga-score-overview">
             <div className="manga-score-box">
               <span>AniList Score</span>
+
               <strong>
                 {manga.averageScore != null
                   ? `${(manga.averageScore / 10).toFixed(1)}/10`
@@ -238,6 +287,7 @@ export default function MangaDetails() {
 
             <div className="manga-score-box manga-score-community">
               <span>IMDB Community</span>
+
               <strong>
                 {averageRating != null
                   ? `${averageRating}/10`
@@ -246,65 +296,131 @@ export default function MangaDetails() {
             </div>
           </div>
 
-          <div className="manga-facts">
-            <p>
-              <strong>Status:</strong>{" "}
-              {manga.status?.replaceAll("_", " ") || "Unbekannt"}
-            </p>
-            <p>
-              <strong>Kapitel:</strong> {manga.chapters ?? "Unbekannt"}
-            </p>
-            <p>
-              <strong>Bände:</strong> {manga.volumes ?? "Unbekannt"}
-            </p>
-            <p>
-              <strong>Beginn:</strong> {formatDate(manga.startDate)}
-            </p>
-            <p>
-              <strong>Ende:</strong> {formatDate(manga.endDate)}
-            </p>
-          </div>
+          {/* Ausklappbarer Bereich: Manga-Fakten */}
+          <details className="manga-accordion">
+            <summary className="manga-accordion-summary">
+              <span>Allgemeine Informationen</span>
+              <span
+                className="manga-accordion-icon"
+                aria-hidden="true"
+              >
+                +
+              </span>
+            </summary>
 
-          <h2 className="panel-title">Beschreibung</h2>
-          <div className="manga-description">
-            {manga.description
-              ? manga.description
-                  .replace(/<br\s*\/?>/gi, "\n")
-                  .replace(/<[^>]*>/g, "")
-                  .split("\n")
-                  .map((line, index) => (
-                    <p key={index}>{line || "\u00a0"}</p>
-                  ))
-              : (
-                <p className="muted">
-                  Keine Beschreibung vorhanden.
+            <div className="manga-accordion-content">
+              <div className="manga-facts">
+                <p>
+                  <strong>Status:</strong>{" "}
+                  {manga.status?.replaceAll("_", " ") || "Unbekannt"}
                 </p>
-              )}
-          </div>
 
-          {manga.staff?.edges?.length > 0 && (
-            <div className="manga-staff">
-              <h2 className="panel-title">Mitwirkende</h2>
-
-              {manga.staff.edges.slice(0, 8).map((edge, index) => (
-                <p key={`${edge.node.id}-${index}`}>
-                  <strong>{edge.role}:</strong> {edge.node.name.full}
+                <p>
+                  <strong>Kapitel:</strong>{" "}
+                  {manga.chapters ?? "Unbekannt"}
                 </p>
-              ))}
+
+                <p>
+                  <strong>Bände:</strong>{" "}
+                  {manga.volumes ?? "Unbekannt"}
+                </p>
+
+                <p>
+                  <strong>Beginn:</strong>{" "}
+                  {formatDate(manga.startDate)}
+                </p>
+
+                <p>
+                  <strong>Ende:</strong>{" "}
+                  {formatDate(manga.endDate)}
+                </p>
+              </div>
             </div>
+          </details>
+
+          {/* Ausklappbarer Bereich: Manga-Beschreibung */}
+          <details className="manga-accordion">
+            <summary className="manga-accordion-summary">
+              <span>Beschreibung</span>
+              <span
+                className="manga-accordion-icon"
+                aria-hidden="true"
+              >
+                +
+              </span>
+            </summary>
+
+            <div className="manga-accordion-content">
+              <div className="manga-description">
+                {manga.description ? (
+                  manga.description
+                    .replace(/<br\s*\/?>/gi, "\n")
+                    .replace(/<[^>]*>/g, "")
+                    .split("\n")
+                    .map((line, index) => (
+                      <p key={index}>
+                        {line || "\u00a0"}
+                      </p>
+                    ))
+                ) : (
+                  <p className="muted">
+                    Keine Beschreibung vorhanden.
+                  </p>
+                )}
+              </div>
+            </div>
+          </details>
+
+          {/* Ausklappbarer Bereich: Mitwirkende */}
+          {manga.staff?.edges?.length > 0 && (
+            <details className="manga-accordion">
+              <summary className="manga-accordion-summary">
+                <span>Mitwirkende</span>
+                <span
+                  className="manga-accordion-icon"
+                  aria-hidden="true"
+                >
+                  +
+                </span>
+              </summary>
+
+              <div className="manga-accordion-content">
+                <div className="manga-staff">
+                  {manga.staff.edges
+                    .slice(0, 8)
+                    .map((edge, index) => (
+                      <p key={`${edge.node.id}-${index}`}>
+                        <strong>{edge.role}:</strong>{" "}
+                        {edge.node.name.full}
+                      </p>
+                    ))}
+                </div>
+              </div>
+            </details>
           )}
         </div>
       </section>
 
       {/* Bewertungssystem für angemeldete Benutzer */}
-      <section className="panel">
-        <p className="hero-eyebrow">Rate this Manga</p>
-        <h2 className="panel-title">Deine Bewertung</h2>
+      <section
+        className="panel"
+        id="manga-rating-section"
+      >
+        <p className="hero-eyebrow">
+          Rate this Manga
+        </p>
+
+        <h2 className="panel-title">
+          Deine Bewertung
+        </h2>
 
         {!user ? (
           <p>
             Du musst{" "}
-            <Link className="community-text-link" to="/login">
+            <Link
+              className="community-text-link"
+              to="/login"
+            >
               angemeldet
             </Link>{" "}
             sein, um diesen Manga zu bewerten.
@@ -324,13 +440,18 @@ export default function MangaDetails() {
               onChange={(event) => setRating(event.target.value)}
               required
             >
-              <option value="">Bewertung auswählen</option>
+              <option value="">
+                Bewertung auswählen
+              </option>
 
               {Array.from(
                 { length: 10 },
                 (_, index) => index + 1
               ).map((value) => (
-                <option key={value} value={value}>
+                <option
+                  key={value}
+                  value={value}
+                >
                   {value}/10
                 </option>
               ))}
@@ -348,13 +469,28 @@ export default function MangaDetails() {
           </form>
         )}
 
-        {message && <p role="status">{message}</p>}
-        {ratingsError && <p role="alert">{ratingsError}</p>}
+        {message && (
+          <p role="status">
+            {message}
+          </p>
+        )}
+
+        {ratingsError && (
+          <p role="alert">
+            {ratingsError}
+          </p>
+        )}
       </section>
 
       {/* Kommentare erstellen, anzeigen, bearbeiten und löschen */}
-      <section className="panel">
-        <p className="hero-eyebrow">Manga Discussion</p>
+      <section
+        className="panel"
+        id="manga-comments-section"
+      >
+        <p className="hero-eyebrow">
+          Manga Discussion
+        </p>
+
         <h2 className="panel-title">
           Kommentare ({comments.length})
         </h2>
@@ -364,7 +500,9 @@ export default function MangaDetails() {
             className="manga-comment-form"
             onSubmit={handleAddComment}
           >
-            <label htmlFor="new-comment">Dein Kommentar</label>
+            <label htmlFor="new-comment">
+              Dein Kommentar
+            </label>
 
             <textarea
               id="new-comment"
@@ -396,7 +534,10 @@ export default function MangaDetails() {
           </form>
         ) : (
           <p>
-            <Link className="community-text-link" to="/login">
+            <Link
+              className="community-text-link"
+              to="/login"
+            >
               Melde dich an
             </Link>
             , um einen Kommentar zu schreiben.
@@ -404,7 +545,10 @@ export default function MangaDetails() {
         )}
 
         {commentsError && (
-          <p className="auth-message" role="alert">
+          <p
+            className="auth-message"
+            role="alert"
+          >
             {commentsError}
           </p>
         )}
@@ -423,7 +567,10 @@ export default function MangaDetails() {
             )
 
             return (
-              <article className="comment" key={comment.id}>
+              <article
+                className="comment"
+                key={comment.id}
+              >
                 {editingId === comment.id ? (
                   <form
                     className="manga-comment-form"
@@ -481,7 +628,7 @@ export default function MangaDetails() {
                       </small>
                     </div>
 
-                    {/* Die Komponente zeigt Spoiler erst nach einem Klick. */}
+                    {/* Spoiler werden erst nach dem Bestätigen angezeigt. */}
                     <SpoilerContent
                       key={`${comment.id}-${comment.updated_at}`}
                       spoiler={Boolean(comment.spoiler)}
