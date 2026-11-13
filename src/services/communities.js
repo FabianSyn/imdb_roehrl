@@ -50,3 +50,40 @@ export async function leaveCommunity(communityId, userId) {
     .eq("user_id", userId)
   if (error) throw error
 }
+
+
+/**
+ * Löscht eine Community aus Supabase.
+ *
+ * Die Anfrage wird auf die Community-ID und den Gründer begrenzt.
+ * Zusätzlich muss eine RLS-Regel in Supabase sicherstellen,
+ * dass ausschließlich der tatsächlich angemeldete Gründer löschen darf.
+ */
+export async function deleteCommunity(communityId, userId) {
+  if (!communityId || !userId) {
+    throw new Error("Community-ID oder Benutzer-ID fehlt.")
+  }
+
+  const { data, error } = await supabase
+    .from("communities")
+    .delete()
+    .eq("id", communityId)
+    .eq("created_by", userId)
+    .select("id")
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  // Auch bei fehlender Berechtigung kann Supabase null zurückgeben.
+  // Deshalb darf ein fehlender Datensatz nicht als Erfolg gelten.
+  if (!data) {
+    throw new Error(
+      "Die Community konnte nicht gelöscht werden. " +
+      "Möglicherweise bist du nicht der Gründer oder sie existiert nicht mehr."
+    )
+  }
+
+  return data
+}

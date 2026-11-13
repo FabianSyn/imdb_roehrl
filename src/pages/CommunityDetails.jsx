@@ -1,15 +1,16 @@
 
 /**
- * Zeigt eine Community mit Mitgliedschaft, Diskussionsthemen und Antworten.
- * Mitglieder können Beiträge verfassen, bearbeiten, löschen und Spoiler
- * ein- oder ausblenden.
+ * Zeigt eine einzelne Community mit Mitgliedschaften, Diskussionen und Antworten.
  *
- * Gründer und Mitglieder erhalten eine einheitliche Statusanzeige.
- * Diese verwendet die bereits vorhandene Klasse community-kicker.
+ * Mitglieder können Themen und Antworten erstellen, bearbeiten und löschen.
+ * Spoiler können verborgen und wieder angezeigt werden.
+ *
+ * Nur der Gründer darf die gesamte Community löschen.
+ * Ungültige Community-IDs werden vor der Supabase-Abfrage abgefangen.
  */
 
 import { useEffect, useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 
 import useAuth from "../hooks/useAuth"
 import useCommunityDiscussions from "../hooks/useCommunityDiscussions"
@@ -17,7 +18,8 @@ import useCommunityDiscussions from "../hooks/useCommunityDiscussions"
 import {
   getCommunity,
   joinCommunity,
-  leaveCommunity
+  leaveCommunity,
+  deleteCommunity
 } from "../services/communities"
 
 import {
@@ -33,14 +35,30 @@ import {
 } from "../services/communityReplies"
 
 /**
- * Verwaltet die Community-Seite.
- * useParams() liest die Community-ID aus der URL.
- * useAuth() liefert den Benutzer und useCommunityDiscussions()
- * lädt die Diskussionsthemen und Antworten.
+ * Prüft, ob eine Zeichenfolge dem Format einer UUID entspricht.
+ * So verhindern wir Anfragen mit undefined oder ungültigen IDs.
+ */
+const isValidUuid = (value) => {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  )
+}
+
+/**
+ * Hauptkomponente der Community-Detailseite.
+ * useParams() liest die ID aus der URL.
+ * useNavigate() ermöglicht die Weiterleitung nach dem Löschen.
  */
 export default function CommunityDetails() {
   const { id } = useParams()
+  const navigate = useNavigate()
 
+  // Prüft die ID, bevor sie an die Datenladefunktionen weitergegeben wird.
+  const validId = isValidUuid(id)
+  const communityId = validId ? id : null
+
+  // Benutzerstatus und Diskussionen werden über Custom Hooks geladen.
   const { user, loading: authLoading } = useAuth()
 
   const {
@@ -49,41 +67,43 @@ export default function CommunityDetails() {
     loading: discussionsLoading,
     error: discussionsError,
     refreshDiscussions
-  } = useCommunityDiscussions(id)
+  } = useCommunityDiscussions(communityId)
 
-  // Community-Daten und Ladezustände.
+  // Community-Daten und allgemeine Statuswerte.
   const [community, setCommunity] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState("")
   const [postError, setPostError] = useState("")
+  const [deleteError, setDeleteError] = useState("")
 
-  // Formular für neue Diskussionsthemen.
+  // Eingaben für neue Diskussionsthemen.
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [spoiler, setSpoiler] = useState(false)
 
-  // Bearbeitungsformular für Diskussionsthemen.
+  // Bearbeitungsstatus für Diskussionsthemen.
   const [editingId, setEditingId] = useState(null)
   const [editTitle, setEditTitle] = useState("")
   const [editContent, setEditContent] = useState("")
   const [editSpoiler, setEditSpoiler] = useState(false)
 
-  // Formular- und Bearbeitungszustände für Antworten.
+  // Eingaben und Bearbeitungsstatus für Antworten.
   const [replyDrafts, setReplyDrafts] = useState({})
   const [replySpoilers, setReplySpoilers] = useState({})
   const [editingReplyId, setEditingReplyId] = useState(null)
   const [editReplyContent, setEditReplyContent] = useState("")
   const [editReplySpoiler, setEditReplySpoiler] = useState(false)
 
-  // Speichert, welche Spoiler bereits aufgedeckt wurden.
+  // Speichert, welche Spoiler sichtbar gemacht wurden.
   const [revealedPosts, setRevealedPosts] = useState({})
   const [revealedReplies, setRevealedReplies] = useState({})
 
   /**
-   * Lädt die ausgewählte Community über ihren Supabase-Service.
-   * Bei Änderung der URL-ID wird die neue Community geladen.
-   * active verhindert State-Updates veralteter Anfragen.
+   * Lädt eine einzelne Community aus Supabase.
+   * Wenn die ID ungültig ist, wird keine Datenbankabfrage durchgeführt.
+   * active verhindert State-Updates nach dem Verlassen der Komponente.
    */
   useEffect(() => {
     let active = true
@@ -91,17 +111,26 @@ export default function CommunityDetails() {
     const loadCommunity = async () => {
       setLoading(true)
       setError("")
+      setDeleteError("")
       setCommunity(null)
 
+      if (!communityId) {
+        setError("Keine gültige Community-ID in der Adresse gefunden.")
+        setLoading(false)
+        return
+      }
+
       try {
-        const communityData = await getCommunity(id)
+        const communityData = await getCommunity(communityId)
 
         if (active) {
           setCommunity(communityData)
         }
       } catch (err) {
         if (active) {
-          setError(err.message)
+          setError(
+            err.message || "Community konnte nicht geladen werden."
+          )
         }
       } finally {
         if (active) {
@@ -115,19 +144,19 @@ export default function CommunityDetails() {
     return () => {
       active = false
     }
-  }, [id])
+  }, [communityId])
 
   /**
-   * Ermittelt, ob der Benutzer die Community gegründet hat.
-   * Der Gründer darf die Diskussionsfunktionen verwenden.
+   * Ermittelt den Gründerstatus anhand der gespeicherten created_by-ID.
+   * Nur der Gründer darf die gesamte Community löschen.
    */
   const isCreator = Boolean(
     user && community?.created_by === user.id
   )
 
   /**
-   * Prüft mithilfe von some() die Community-Mitgliedschaft.
-   * Der Gründer wird für die Oberfläche als Mitglied behandelt.
+   * Prüft, ob der Benutzer Mitglied ist.
+   * Der Gründer wird für die Oberfläche ebenfalls als Mitglied behandelt.
    */
   const isMember =
     isCreator ||
@@ -138,13 +167,12 @@ export default function CommunityDetails() {
       )
     )
 
-  // Anzahl der Mitglieder laut Supabase-Daten.
+  // Anzahl der Mitglieder aus der Datenbank.
   const memberCount = community?.community_members?.length || 0
 
   /**
-   * Erstellt die einheitliche Statusanzeige für Gründer und Mitglieder.
-   * Beide verwenden später dieselbe CSS-Klasse community-kicker.
-   * Nichtmitglieder erhalten keinen Status.
+   * Einheitlicher Status für Gründer und normale Mitglieder.
+   * Das Label verwendet die bereits vorhandene CSS-Klasse community-kicker.
    */
   const membershipStatus = isCreator
     ? "GRÜNDER DIESER COMMUNITY"
@@ -153,46 +181,47 @@ export default function CommunityDetails() {
       : null
 
   /**
-   * Ermöglicht den Bei- oder Austritt über die Supabase-Services.
-   * Gründer können nicht über diese Funktion austreten.
-   * Danach wird die Community neu geladen.
+   * Verwaltet den Bei- und Austritt.
+   * Der Gründer darf seine eigene Community nicht regulär verlassen.
    */
   const handleMembership = async () => {
-    if (!user || !community || saving || isCreator) return
+    if (!user || !community || !communityId || saving || deleting || isCreator) {
+      return
+    }
 
     setSaving(true)
     setError("")
 
     try {
       if (isMember) {
-        await leaveCommunity(id, user.id)
+        await leaveCommunity(communityId, user.id)
       } else {
-        await joinCommunity(id, user.id)
+        await joinCommunity(communityId, user.id)
       }
 
-      setCommunity(await getCommunity(id))
+      setCommunity(await getCommunity(communityId))
     } catch (err) {
-      setError(err.message)
+      setError(err.message || "Mitgliedschaft konnte nicht geändert werden.")
     } finally {
       setSaving(false)
     }
   }
 
   /**
-   * Veröffentlicht ein neues Diskussionsthema mit optionalem Spoiler.
-   * refreshDiscussions() fordert anschließend aktualisierte Daten an.
+   * Erstellt ein Diskussionsthema.
+   * Nach dem Speichern werden die Diskussionen erneut angefragt.
    */
   const handleCreatePost = async (event) => {
     event.preventDefault()
 
-    if (!user || !isMember || saving) return
+    if (!user || !isMember || !communityId || saving || deleting) return
 
     setSaving(true)
     setPostError("")
 
     try {
       await createCommunityPost(
-        id,
+        communityId,
         user.id,
         title,
         content,
@@ -205,32 +234,31 @@ export default function CommunityDetails() {
       setContent("")
       setSpoiler(false)
     } catch (err) {
-      setPostError(err.message)
+      setPostError(err.message || "Thema konnte nicht erstellt werden.")
     } finally {
       setSaving(false)
     }
   }
 
   /**
-   * Übernimmt die Werte eines Beitrags in das Bearbeitungsformular.
+   * Übernimmt ein vorhandenes Thema in das Bearbeitungsformular.
    */
   const startEditingPost = (post) => {
     setEditingId(post.id)
     setEditTitle(post.title)
     setEditContent(post.content)
-    setEditSpoiler(post.spoiler)
+    setEditSpoiler(Boolean(post.spoiler))
     setPostError("")
   }
 
   /**
-   * Speichert Änderungen an einem Thema.
-   * Danach werden die Diskussionen neu geladen
-   * und ein möglicher Spoiler wieder verborgen.
+   * Speichert ein bearbeitetes Diskussionsthema.
+   * Ein zuvor geöffneter Spoiler wird danach wieder verborgen.
    */
   const handleUpdatePost = async (event) => {
     event.preventDefault()
 
-    if (!user || saving || editingId === null) return
+    if (!user || saving || deleting || editingId === null) return
 
     setSaving(true)
     setPostError("")
@@ -246,31 +274,32 @@ export default function CommunityDetails() {
 
       refreshDiscussions()
 
-      setEditingId(null)
-
       setRevealedPosts((current) => ({
         ...current,
         [editingId]: false
       }))
+
+      setEditingId(null)
     } catch (err) {
-      setPostError(err.message)
+      setPostError(err.message || "Thema konnte nicht gespeichert werden.")
     } finally {
       setSaving(false)
     }
   }
 
   /**
-   * Löscht ein Diskussionsthema nach einer Bestätigung.
-   * Anschließend werden Themen und Antworten neu geladen.
+   * Löscht ein Thema nach Bestätigung.
+   * Die zugehörigen Antworten werden entsprechend der Datenbankregeln gelöscht.
    */
   const handleDeletePost = async (postId) => {
     if (
       !user ||
       saving ||
-      !window.confirm(
-        "Dieses Thema und alle Antworten wirklich löschen?"
-      )
-    ) return
+      deleting ||
+      !window.confirm("Dieses Thema und alle Antworten wirklich löschen?")
+    ) {
+      return
+    }
 
     setSaving(true)
     setPostError("")
@@ -284,22 +313,22 @@ export default function CommunityDetails() {
         setEditingId(null)
       }
     } catch (err) {
-      setPostError(err.message)
+      setPostError(err.message || "Thema konnte nicht gelöscht werden.")
     } finally {
       setSaving(false)
     }
   }
 
   /**
-   * Veröffentlicht eine Antwort zum ausgewählten Thema.
-   * trim() entfernt überflüssige Leerzeichen.
+   * Erstellt eine neue Antwort.
+   * trim() entfernt Leerzeichen am Anfang und Ende.
    */
   const handleCreateReply = async (event, postId) => {
     event.preventDefault()
 
     const text = replyDrafts[postId]?.trim()
 
-    if (!user || !isMember || saving || !text) return
+    if (!user || !isMember || saving || deleting || !text) return
 
     setSaving(true)
     setPostError("")
@@ -324,30 +353,29 @@ export default function CommunityDetails() {
         [postId]: false
       }))
     } catch (err) {
-      setPostError(err.message)
+      setPostError(err.message || "Antwort konnte nicht erstellt werden.")
     } finally {
       setSaving(false)
     }
   }
 
   /**
-   * Übernimmt die Antwortdaten in das Bearbeitungsformular.
+   * Übernimmt eine Antwort in das Bearbeitungsformular.
    */
   const startEditingReply = (reply) => {
     setEditingReplyId(reply.id)
     setEditReplyContent(reply.content)
-    setEditReplySpoiler(reply.spoiler)
+    setEditReplySpoiler(Boolean(reply.spoiler))
     setPostError("")
   }
 
   /**
-   * Aktualisiert eine Antwort über den Supabase-Service.
-   * Anschließend werden die Diskussionen neu geladen.
+   * Speichert Änderungen an einer Antwort.
    */
   const handleUpdateReply = async (event) => {
     event.preventDefault()
 
-    if (!user || saving || editingReplyId === null) return
+    if (!user || saving || deleting || editingReplyId === null) return
 
     setSaving(true)
     setPostError("")
@@ -369,21 +397,24 @@ export default function CommunityDetails() {
 
       setEditingReplyId(null)
     } catch (err) {
-      setPostError(err.message)
+      setPostError(err.message || "Antwort konnte nicht gespeichert werden.")
     } finally {
       setSaving(false)
     }
   }
 
   /**
-   * Löscht eine Antwort nach Bestätigung und lädt die Diskussionen neu.
+   * Löscht eine Antwort nach einer Bestätigung.
    */
   const handleDeleteReply = async (replyId) => {
     if (
       !user ||
       saving ||
+      deleting ||
       !window.confirm("Diese Antwort wirklich löschen?")
-    ) return
+    ) {
+      return
+    }
 
     setSaving(true)
     setPostError("")
@@ -397,32 +428,78 @@ export default function CommunityDetails() {
         setEditingReplyId(null)
       }
     } catch (err) {
-      setPostError(err.message)
+      setPostError(err.message || "Antwort konnte nicht gelöscht werden.")
     } finally {
       setSaving(false)
     }
   }
 
-  // Wartet, bis Community, Benutzer und Diskussionen geladen wurden.
-  if (loading || authLoading || discussionsLoading) {
+  /**
+   * Löscht die gesamte Community.
+   *
+   * Die Löschaktion wird nur für den Gründer angezeigt und ausgeführt.
+   * Supabase muss dies zusätzlich mit einer RLS-Policy absichern.
+   *
+   * Vor dem Löschen wird eine Bestätigung verlangt.
+   * Nach erfolgreichem Löschen erfolgt die Weiterleitung zur Übersicht.
+   */
+  const handleDeleteCommunity = async () => {
+    if (
+      !user ||
+      !community ||
+      !communityId ||
+      !isCreator ||
+      saving ||
+      deleting
+    ) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Möchtest du die Community "${community.name}" wirklich löschen?\n\n` +
+      "Alle Mitgliedschaften, Diskussionen und Antworten werden dauerhaft entfernt.\n\n" +
+      "Diese Aktion kann nicht rückgängig gemacht werden."
+    )
+
+    if (!confirmed) return
+
+    setDeleting(true)
+    setDeleteError("")
+
+    try {
+      await deleteCommunity(communityId, user.id)
+
+      navigate("/communities", { replace: true })
+    } catch (err) {
+      setDeleteError(
+        err.message || "Die Community konnte nicht gelöscht werden."
+      )
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  // Ladeanzeige während der Datenabfragen.
+  if (loading || authLoading || (communityId && discussionsLoading)) {
     return (
       <main className="page">
-        <p className="muted">
-          Community wird geladen...
-        </p>
+        <p className="muted">Community wird geladen...</p>
       </main>
     )
   }
 
+  // Fehlerseite, wenn die ID ungültig ist oder die Community nicht existiert.
   if (!community) {
     return (
       <main className="page">
         <h1>Community nicht gefunden</h1>
 
-        {error && <p role="alert">{error}</p>}
+        <p className="muted">
+          {error || "Diese Community existiert nicht mehr."}
+        </p>
 
         <Link className="primary-button" to="/communities">
-          Zur Übersicht
+          Zur Community-Übersicht
         </Link>
       </main>
     )
@@ -434,16 +511,14 @@ export default function CommunityDetails() {
         ← Alle Communities
       </Link>
 
-      {/* Community-Informationen und einheitliche Mitgliedschaftsanzeige */}
+      {/* Informationen zur Community und zum Mitgliedschaftsstatus */}
       <section className="community-detail-hero">
         <div className="community-detail-symbol">
           {community.name.charAt(0).toUpperCase()}
         </div>
 
         <div>
-          <p className="hero-eyebrow">
-            Community Headquarters
-          </p>
+          <p className="hero-eyebrow">Community Headquarters</p>
 
           <h1 className="community-detail-title">
             {community.name}
@@ -458,7 +533,7 @@ export default function CommunityDetails() {
             {new Date(community.created_at).toLocaleDateString("de-DE")}
           </p>
 
-          {/* Gründer und Mitglieder bekommen denselben Label-Stil. */}
+          {/* Einheitliche, nicht anklickbare Statusanzeige */}
           {membershipStatus && (
             <p className="community-kicker">
               ★ {membershipStatus}
@@ -467,12 +542,10 @@ export default function CommunityDetails() {
         </div>
       </section>
 
-      {/* Mitgliedschaftsbereich mit tatsächlichen Aktionen */}
+      {/* Beitritt und Austritt – der Gründer sieht keinen Button. */}
       <section className="panel community-membership-panel">
         <div>
-          <p className="hero-eyebrow">
-            Join the discussion
-          </p>
+          <p className="hero-eyebrow">Join the discussion</p>
 
           <h2 className="panel-title">
             {isCreator
@@ -491,7 +564,6 @@ export default function CommunityDetails() {
           </p>
         </div>
 
-        {/* Der Gründer erhält keinen Button und kein zweites Label. */}
         {!user ? (
           <Link className="primary-button" to="/login">
             Zum Beitreten anmelden
@@ -501,7 +573,7 @@ export default function CommunityDetails() {
             className={isMember ? "secondary-button" : "primary-button"}
             type="button"
             onClick={handleMembership}
-            disabled={saving}
+            disabled={saving || deleting}
           >
             {saving
               ? "Speichern..."
@@ -514,24 +586,14 @@ export default function CommunityDetails() {
         {error && <p role="alert">{error}</p>}
       </section>
 
-      {/* Nur Mitglieder und Gründer dürfen neue Themen erstellen. */}
+      {/* Formular für neue Diskussionsthemen */}
       {isMember && (
         <section className="panel">
-          <p className="hero-eyebrow">
-            Start a discussion
-          </p>
+          <p className="hero-eyebrow">Start a discussion</p>
+          <h2 className="panel-title">Neues Thema eröffnen</h2>
 
-          <h2 className="panel-title">
-            Neues Thema eröffnen
-          </h2>
-
-          <form
-            className="community-post-form"
-            onSubmit={handleCreatePost}
-          >
-            <label htmlFor="post-title">
-              Titel
-            </label>
+          <form className="community-post-form" onSubmit={handleCreatePost}>
+            <label htmlFor="post-title">Titel</label>
 
             <input
               id="post-title"
@@ -543,9 +605,7 @@ export default function CommunityDetails() {
               required
             />
 
-            <label htmlFor="post-content">
-              Dein Beitrag
-            </label>
+            <label htmlFor="post-content">Dein Beitrag</label>
 
             <textarea
               id="post-content"
@@ -568,23 +628,19 @@ export default function CommunityDetails() {
             <button
               className="primary-button"
               type="submit"
-              disabled={saving}
+              disabled={saving || deleting}
             >
-              {saving
-                ? "Veröffentlichen..."
-                : "Thema veröffentlichen"}
+              {saving ? "Veröffentlichen..." : "Thema veröffentlichen"}
             </button>
           </form>
         </section>
       )}
 
-      {/* Diskussionsübersicht mit Themen und Antworten */}
+      {/* Diskussionsübersicht */}
       <section className="community-board">
         <div className="community-board-heading">
           <div>
-            <p className="hero-eyebrow">
-              Discussion Board
-            </p>
+            <p className="hero-eyebrow">Discussion Board</p>
 
             <h2 className="section-title">
               Die <span>Diskussionen.</span>
@@ -622,7 +678,7 @@ export default function CommunityDetails() {
               user && post.author_id === user.id
             )
 
-            // filter() wählt alle Antworten zu diesem Beitrag aus.
+            // filter() wählt nur Antworten zum jeweiligen Thema aus.
             const postReplies = replies.filter(
               (reply) => reply.post_id === post.id
             )
@@ -631,10 +687,7 @@ export default function CommunityDetails() {
               post.spoiler && !revealedPosts[post.id]
 
             return (
-              <article
-                className="community-post"
-                key={post.id}
-              >
+              <article className="community-post" key={post.id}>
                 {editingId === post.id ? (
                   <form
                     className="community-post-form"
@@ -678,7 +731,7 @@ export default function CommunityDetails() {
                       <button
                         className="primary-button"
                         type="submit"
-                        disabled={saving}
+                        disabled={saving || deleting}
                       >
                         Speichern
                       </button>
@@ -687,7 +740,7 @@ export default function CommunityDetails() {
                         className="secondary-button"
                         type="button"
                         onClick={() => setEditingId(null)}
-                        disabled={saving}
+                        disabled={saving || deleting}
                       >
                         Abbrechen
                       </button>
@@ -706,9 +759,7 @@ export default function CommunityDetails() {
                     </div>
 
                     {post.spoiler && (
-                      <span className="spoiler-badge">
-                        Spoiler
-                      </span>
+                      <span className="spoiler-badge">Spoiler</span>
                     )}
 
                     {hidePost ? (
@@ -754,9 +805,7 @@ export default function CommunityDetails() {
                     )}
 
                     {post.updated_at !== post.created_at && (
-                      <small className="muted">
-                        {" "}Bearbeitet
-                      </small>
+                      <small className="muted"> Bearbeitet</small>
                     )}
 
                     {ownPost && (
@@ -765,7 +814,7 @@ export default function CommunityDetails() {
                           className="secondary-button"
                           type="button"
                           onClick={() => startEditingPost(post)}
-                          disabled={saving}
+                          disabled={saving || deleting}
                         >
                           Bearbeiten
                         </button>
@@ -774,7 +823,7 @@ export default function CommunityDetails() {
                           className="community-delete-button"
                           type="button"
                           onClick={() => handleDeletePost(post.id)}
-                          disabled={saving}
+                          disabled={saving || deleting}
                         >
                           Löschen
                         </button>
@@ -783,7 +832,7 @@ export default function CommunityDetails() {
                   </>
                 )}
 
-                {/* Antworten zum aktuellen Thema */}
+                {/* Antworten zum Diskussionsthema */}
                 <section className="community-replies">
                   <h4 className="community-replies-title">
                     Antworten <span>{postReplies.length}</span>
@@ -805,10 +854,7 @@ export default function CommunityDetails() {
                         reply.spoiler && !revealedReplies[reply.id]
 
                       return (
-                        <div
-                          className="community-reply"
-                          key={reply.id}
-                        >
+                        <div className="community-reply" key={reply.id}>
                           {editingReplyId === reply.id ? (
                             <form
                               className="community-post-form"
@@ -839,7 +885,7 @@ export default function CommunityDetails() {
                                 <button
                                   className="primary-button"
                                   type="submit"
-                                  disabled={saving}
+                                  disabled={saving || deleting}
                                 >
                                   Speichern
                                 </button>
@@ -848,7 +894,7 @@ export default function CommunityDetails() {
                                   className="secondary-button"
                                   type="button"
                                   onClick={() => setEditingReplyId(null)}
-                                  disabled={saving}
+                                  disabled={saving || deleting}
                                 >
                                   Abbrechen
                                 </button>
@@ -874,9 +920,7 @@ export default function CommunityDetails() {
 
                               {hideReply ? (
                                 <div className="community-spoiler-cover">
-                                  <p>
-                                    Diese Antwort enthält Spoiler.
-                                  </p>
+                                  <p>Diese Antwort enthält Spoiler.</p>
 
                                   <button
                                     className="secondary-button"
@@ -911,9 +955,7 @@ export default function CommunityDetails() {
                               )}
 
                               {reply.updated_at !== reply.created_at && (
-                                <small className="muted">
-                                  {" "}Bearbeitet
-                                </small>
+                                <small className="muted"> Bearbeitet</small>
                               )}
 
                               {ownReply && (
@@ -921,7 +963,7 @@ export default function CommunityDetails() {
                                   <button
                                     type="button"
                                     onClick={() => startEditingReply(reply)}
-                                    disabled={saving}
+                                    disabled={saving || deleting}
                                   >
                                     Bearbeiten
                                   </button>
@@ -929,7 +971,7 @@ export default function CommunityDetails() {
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteReply(reply.id)}
-                                    disabled={saving}
+                                    disabled={saving || deleting}
                                   >
                                     Löschen
                                   </button>
@@ -942,7 +984,7 @@ export default function CommunityDetails() {
                     })}
                   </div>
 
-                  {/* Antwortformular für Community-Mitglieder und Gründer */}
+                  {/* Antwortformular für Mitglieder und Gründer */}
                   {isMember && (
                     <form
                       className="community-reply-form"
@@ -979,11 +1021,9 @@ export default function CommunityDetails() {
                       <button
                         className="primary-button"
                         type="submit"
-                        disabled={saving}
+                        disabled={saving || deleting}
                       >
-                        {saving
-                          ? "Speichern..."
-                          : "Antwort veröffentlichen"}
+                        {saving ? "Speichern..." : "Antwort veröffentlichen"}
                       </button>
                     </form>
                   )}
@@ -993,6 +1033,44 @@ export default function CommunityDetails() {
           })}
         </div>
       </section>
+
+      {/* Ausschließlich der Gründer sieht die Löschfunktion. */}
+      {isCreator && (
+        <section
+          className="panel"
+          aria-labelledby="delete-community-title"
+        >
+          <p className="hero-eyebrow">Community verwalten</p>
+
+          <h2 className="panel-title" id="delete-community-title">
+            Community löschen
+          </h2>
+
+          <p className="muted">
+            Beim Löschen werden alle Mitgliedschaften,
+            Diskussionsthemen und Antworten dieser Community
+            dauerhaft entfernt. Diese Aktion kann nicht
+            rückgängig gemacht werden.
+          </p>
+
+          <button
+            className="community-delete-button"
+            type="button"
+            onClick={handleDeleteCommunity}
+            disabled={saving || deleting}
+          >
+            {deleting
+              ? "Community wird gelöscht..."
+              : "Community endgültig löschen"}
+          </button>
+
+          {deleteError && (
+            <p className="auth-message" role="alert">
+              {deleteError}
+            </p>
+          )}
+        </section>
+      )}
     </main>
   )
 }
